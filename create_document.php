@@ -28,6 +28,7 @@ $selectedContractorId = $_POST['contractor_id'] ?? '';
 $selectedTemplateId = $_POST['template_id'] ?? '';
 $generatedHtml = null;
 $errorMessage = null;
+$selectionDisabled = empty($contractors) || empty($templates);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $templateMeta = null;
@@ -101,10 +102,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if ($errorMessage): ?>
                     <div class="status error"><?php echo htmlspecialchars($errorMessage); ?></div>
                 <?php endif; ?>
+                <?php if (empty($templates) || empty($contractors)): ?>
+                    <div class="status error">Please ensure at least one template and one contractor exist for this department.</div>
+                <?php endif; ?>
                 <form method="post" class="inline-form" autocomplete="off">
                     <div class="form-group">
                         <label for="template_id">Template</label>
-                        <select id="template_id" name="template_id" required>
+                        <select id="template_id" name="template_id" required <?php echo $selectionDisabled ? 'disabled' : ''; ?>>
                             <option value="" disabled <?php echo $selectedTemplateId === '' ? 'selected' : ''; ?>>Select template</option>
                             <?php foreach ($templates as $template): ?>
                                 <option value="<?php echo htmlspecialchars($template['id']); ?>" <?php echo $selectedTemplateId === ($template['id'] ?? '') ? 'selected' : ''; ?>><?php echo htmlspecialchars($template['title'] ?? ''); ?></option>
@@ -113,14 +117,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="form-group">
                         <label for="contractor_id">Contractor</label>
-                        <select id="contractor_id" name="contractor_id" required>
+                        <select id="contractor_id" name="contractor_id" required <?php echo $selectionDisabled ? 'disabled' : ''; ?>>
                             <option value="" disabled <?php echo $selectedContractorId === '' ? 'selected' : ''; ?>>Select contractor</option>
                             <?php foreach ($contractors as $contractor): ?>
                                 <option value="<?php echo htmlspecialchars($contractor['id']); ?>" <?php echo $selectedContractorId === ($contractor['id'] ?? '') ? 'selected' : ''; ?>><?php echo htmlspecialchars($contractor['name'] ?? ''); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="submit">Generate</button>
+                    <button type="submit" <?php echo $selectionDisabled ? 'disabled' : ''; ?>>Generate</button>
                 </form>
             </div>
 

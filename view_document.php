@@ -32,6 +32,13 @@ foreach ($deptUsers as $user) {
 }
 
 $successMessage = null;
+$isCurrentOwner = ($document['current_owner'] ?? '') === ($_SESSION['user_id'] ?? '');
+$queryStatus = $_GET['status'] ?? '';
+if ($queryStatus === 'success') {
+    $successMessage = $_GET['message'] ?? 'Action completed successfully.';
+} elseif ($queryStatus === 'error') {
+    $errorMessage = $_GET['message'] ?? 'Unable to complete the request.';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$errorMessage) {
     $action = $_POST['action'] ?? '';
@@ -151,6 +158,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$errorMessage) {
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
+
+                <div class="panel">
+                    <h3>Supporting Documents</h3>
+                    <?php $attachments = isset($document['attachments']) && is_array($document['attachments']) ? $document['attachments'] : []; ?>
+                    <?php if (empty($attachments)): ?>
+                        <p class="muted">No supporting documents uploaded.</p>
+                    <?php else: ?>
+                        <ul>
+                            <?php foreach ($attachments as $attachment): ?>
+                                <?php
+                                    $filePath = $attachment['path'] ?? '';
+                                    $fileName = $attachment['filename'] ?? basename($filePath);
+                                ?>
+                                <li style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <span aria-hidden="true">📎</span>
+                                    <a href="<?php echo htmlspecialchars($filePath); ?>" target="_blank" rel="noopener noreferrer">
+                                        <?php echo htmlspecialchars($fileName); ?>
+                                    </a>
+                                    <?php if ($isCurrentOwner): ?>
+                                        <form action="upload_attachment.php" method="post" class="inline-form" style="margin: 0;">
+                                            <input type="hidden" name="action" value="delete_attachment">
+                                            <input type="hidden" name="doc_id" value="<?php echo htmlspecialchars($docId); ?>">
+                                            <input type="hidden" name="attachment_path" value="<?php echo htmlspecialchars($filePath); ?>">
+                                            <button type="submit" class="btn-secondary" style="padding: 4px 8px;">Delete</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+
+                    <?php if ($isCurrentOwner): ?>
+                        <form action="upload_attachment.php" method="post" enctype="multipart/form-data" style="margin-top: 16px;">
+                            <input type="hidden" name="doc_id" value="<?php echo htmlspecialchars($docId); ?>">
+                            <input type="hidden" name="action" value="upload_attachment">
+                            <div class="form-group" style="width: 100%;">
+                                <label for="attachments">Upload Supporting Documents</label>
+                                <input type="file" id="attachments" name="attachments[]" multiple required>
+                                <p class="muted" style="margin-top: 4px;">Allowed: .pdf, .jpg, .png, .jpeg, .docx, .xlsx</p>
+                            </div>
+                            <button type="submit">Upload Files</button>
+                        </form>
+                    <?php endif; ?>
+                </div>
 
                 <div class="panel">
                     <h3>History / Audit Trail</h3>

@@ -213,15 +213,33 @@ if ($roleId === 'superadmin') {
         return ($user['status'] ?? 'active') !== 'archived';
     }));
 
+    $adminRoleId = 'admin.' . $deptId;
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
         if ($action === 'add_role') {
             $roleName = trim($_POST['role_name'] ?? '');
+            $providedSlug = strtoupper(trim($_POST['role_slug'] ?? ''));
+
             if ($roleName === '') {
                 $teamError = 'Role name is required.';
             } else {
-                $slug = slugify_label($roleName);
-                $newRoleId = $slug . '.' . $deptId;
+                $initials = '';
+                $words = preg_split('/\s+/', $roleName, -1, PREG_SPLIT_NO_EMPTY);
+                foreach ($words as $word) {
+                    $initials .= strtoupper(substr($word, 0, 1));
+                }
+                if ($initials === '') {
+                    $initials = 'ROLE';
+                }
+
+                $slugBase = $providedSlug !== '' ? $providedSlug : $initials;
+                $slugBase = preg_replace('/[^A-Z0-9_]/', '', $slugBase);
+                if ($slugBase === '') {
+                    $slugBase = $initials;
+                }
+
+                $newRoleId = $slugBase . '.' . $deptId;
 
                 foreach ($deptRoles as $existingRole) {
                     if (($existingRole['id'] ?? '') === $newRoleId) {
@@ -253,6 +271,8 @@ if ($roleId === 'superadmin') {
 
             if ($firstName === '' || $lastName === '' || $password === '' || $roleSelection === '') {
                 $teamError = 'All user fields are required.';
+            } elseif ($roleSelection === $adminRoleId) {
+                $teamError = 'Only the Superadmin can manage the Department Administrator account.';
             } else {
                 $result = createUser($deptId, $firstName, $lastName, $password, $roleSelection, $customId);
                 if ($result['success']) {
@@ -366,6 +386,7 @@ $isGeneralUser = false;
                         <p class="muted">Manage departments. View counts only—no file access.</p>
                     </div>
                     <div class="actions">
+                        <a href="manage_templates.php" class="button-as-link">Template Manager</a>
                         <a href="index.php" class="btn-secondary button-as-link">Back to Login</a>
                     </div>
                 </div>
@@ -476,15 +497,18 @@ $isGeneralUser = false;
                                         <td><?php echo (int) $dept['user_count']; ?></td>
                                         <td><span class="badge"><?php echo htmlspecialchars($dept['status'] ?? 'active'); ?></span></td>
                                         <td>
-                                            <form method="post" class="actions" style="gap:6px; flex-wrap:wrap;" autocomplete="off">
-                                                <input type="hidden" name="action" value="dept_status">
-                                                <input type="hidden" name="target_dept" value="<?php echo htmlspecialchars($dept['id']); ?>">
-                                                <button type="submit" name="status" value="suspended">Suspend</button>
-                                                <button type="submit" name="status" value="archived" class="btn-secondary">Archive</button>
-                                                <?php if (($dept['status'] ?? 'active') !== 'active'): ?>
-                                                    <button type="submit" name="status" value="active" class="btn-secondary">Activate</button>
-                                                <?php endif; ?>
-                                            </form>
+                                            <div class="actions" style="gap:6px; flex-wrap:wrap;">
+                                                <form method="post" style="gap:6px; display:flex; flex-wrap:wrap;" autocomplete="off">
+                                                    <input type="hidden" name="action" value="dept_status">
+                                                    <input type="hidden" name="target_dept" value="<?php echo htmlspecialchars($dept['id']); ?>">
+                                                    <button type="submit" name="status" value="suspended">Suspend</button>
+                                                    <button type="submit" name="status" value="archived" class="btn-secondary">Archive</button>
+                                                    <?php if (($dept['status'] ?? 'active') !== 'active'): ?>
+                                                        <button type="submit" name="status" value="active" class="btn-secondary">Activate</button>
+                                                    <?php endif; ?>
+                                                </form>
+                                                <a class="button-as-link" href="admin_view_dept.php?dept_id=<?php echo urlencode($dept['id']); ?>">View Staff</a>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -637,9 +661,16 @@ $isGeneralUser = false;
                         <h3>Manage Roles</h3>
                         <form class="inline-form" method="post" autocomplete="off">
                             <input type="hidden" name="action" value="add_role">
-                            <div class="form-group">
-                                <label for="role_name">Role Name</label>
-                                <input id="role_name" name="role_name" type="text" placeholder="e.g., Junior Engineer" required>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="role_name">Role Name</label>
+                                    <input id="role_name" name="role_name" type="text" placeholder="e.g., Junior Engineer" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="role_slug">Role ID (Slug)</label>
+                                    <input id="role_slug" name="role_slug" type="text" placeholder="Auto-filled initials (e.g., JE)">
+                                    <p class="muted">Defaults to initials. You may override before saving.</p>
+                                </div>
                             </div>
                             <button type="submit">Create Role</button>
                         </form>
@@ -689,12 +720,13 @@ $isGeneralUser = false;
                                     <label for="role_id">Assign Role</label>
                                     <select id="role_id" name="role_id" required>
                                         <option value="" disabled selected>Select Role</option>
-                                        <?php foreach ($deptRoles as $role): ?>
-                                            <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
+                                    <?php foreach ($deptRoles as $role): ?>
+                                        <?php if (($role['id'] ?? '') === $adminRoleId) { continue; } ?>
+                                        <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
+                        </div>
                             <div class="form-group">
                                 <label for="password">Password</label>
                                 <input id="password" name="password" type="password" placeholder="Temporary password" required>
@@ -735,6 +767,8 @@ $isGeneralUser = false;
         const dashboardFirstName = document.getElementById('first_name');
         const dashboardLastName = document.getElementById('last_name');
         const dashboardUserId = document.getElementById('user_id');
+        const roleNameInput = document.getElementById('role_name');
+        const roleSlugInput = document.getElementById('role_slug');
 
         if (dashboardFirstName && dashboardLastName && dashboardUserId) {
             let dashboardUserIdTouched = false;
@@ -755,6 +789,32 @@ $isGeneralUser = false;
 
             dashboardFirstName.addEventListener('input', updateDashboardUserId);
             dashboardLastName.addEventListener('input', updateDashboardUserId);
+        }
+
+        if (roleNameInput && roleSlugInput) {
+            let roleSlugTouched = false;
+
+            roleSlugInput.addEventListener('input', () => {
+                roleSlugTouched = true;
+            });
+
+            const updateRoleSlug = () => {
+                if (roleSlugTouched) {
+                    return;
+                }
+
+                const name = roleNameInput.value.trim();
+                if (!name) {
+                    roleSlugInput.value = '';
+                    return;
+                }
+
+                const parts = name.split(/\s+/).filter(Boolean);
+                const initials = parts.map((part) => part.charAt(0).toUpperCase()).join('');
+                roleSlugInput.value = initials;
+            };
+
+            roleNameInput.addEventListener('input', updateRoleSlug);
         }
     </script>
     <?php endif; ?>

@@ -19,13 +19,43 @@ if (!is_array($contractors)) {
 
 $templatesDir = $deptPath . '/templates';
 $templatesIndexPath = $templatesDir . '/templates.json';
-$templates = read_json($templatesIndexPath);
-if (!is_array($templates)) {
-    $templates = [];
+$departmentTemplates = read_json($templatesIndexPath);
+if (!is_array($departmentTemplates)) {
+    $departmentTemplates = [];
+}
+
+$systemTemplatesDir = __DIR__ . '/storage/system/templates';
+$systemTemplatesIndexPath = $systemTemplatesDir . '/templates.json';
+$universalTemplates = read_json($systemTemplatesIndexPath);
+if (!is_array($universalTemplates)) {
+    $universalTemplates = [];
+}
+
+$allTemplates = [];
+foreach ($universalTemplates as $template) {
+    if (!is_array($template)) {
+        continue;
+    }
+    $template['scope'] = 'universal';
+    $template['path'] = $systemTemplatesDir . '/' . ($template['filename'] ?? '');
+    $allTemplates[] = $template;
+}
+
+foreach ($departmentTemplates as $template) {
+    if (!is_array($template)) {
+        continue;
+    }
+    $template['scope'] = 'department';
+    $template['path'] = $templatesDir . '/' . ($template['filename'] ?? '');
+    $template['dept_id'] = $deptId;
+    $allTemplates[] = $template;
 }
 
 $selectedContractorId = $_POST['contractor_id'] ?? '';
-$selectedTemplateId = $_POST['template_id'] ?? '';
+$selectedTemplateKey = $_POST['template_id'] ?? '';
+$selectedTemplateParts = array_pad(explode('|', $selectedTemplateKey, 2), 2, '');
+$selectedTemplateScope = $selectedTemplateParts[0];
+$selectedTemplateId = $selectedTemplateParts[1];
 $generatedHtml = null;
 $renderedHtml = null;
 $errorMessage = null;
@@ -34,7 +64,7 @@ $documentTitle = '';
 $deptUsers = array_values(array_filter(getDepartmentUsers($deptId), function (array $user): bool {
     return ($user['status'] ?? 'active') === 'active';
 }));
-$selectionDisabled = empty($contractors) || empty($templates);
+$selectionDisabled = empty($contractors) || empty($allTemplates);
 $includeHeader = isset($_POST['include_header']);
 
 $headerHtml = '<div class="official-header">'
@@ -111,8 +141,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         $templateMeta = null;
-        foreach ($templates as $template) {
-            if (($template['id'] ?? '') === $selectedTemplateId) {
+        foreach ($allTemplates as $template) {
+            if (($template['id'] ?? '') === $selectedTemplateId && ($template['scope'] ?? '') === $selectedTemplateScope) {
                 $templateMeta = $template;
                 break;
             }
@@ -131,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!$contractorData) {
             $errorMessage = 'Contractor not found.';
         } else {
-            $templateFile = $templatesDir . '/' . ($templateMeta['filename'] ?? '');
+            $templateFile = $templateMeta['path'] ?? '';
             if (!file_exists($templateFile)) {
                 $errorMessage = 'Template file missing on disk.';
             } else {
@@ -191,8 +221,8 @@ if ($generatedHtml) {
                 <?php if ($successMessage): ?>
                     <div class="status success"><?php echo htmlspecialchars($successMessage); ?></div>
                 <?php endif; ?>
-                <?php if (empty($templates) || empty($contractors)): ?>
-                    <div class="status error">Please ensure at least one template and one contractor exist for this department.</div>
+                <?php if (empty($allTemplates) || empty($contractors)): ?>
+                    <div class="status error">Please ensure at least one template (global or departmental) and one contractor exist for this department.</div>
                 <?php endif; ?>
                 <form method="post" class="inline-form" autocomplete="off">
                     <input type="hidden" name="action" value="generate">
@@ -200,8 +230,15 @@ if ($generatedHtml) {
                         <label for="template_id">Template</label>
                         <select id="template_id" name="template_id" required <?php echo $selectionDisabled ? 'disabled' : ''; ?>>
                             <option value="" disabled <?php echo $selectedTemplateId === '' ? 'selected' : ''; ?>>Select template</option>
-                            <?php foreach ($templates as $template): ?>
-                                <option value="<?php echo htmlspecialchars($template['id']); ?>" <?php echo $selectedTemplateId === ($template['id'] ?? '') ? 'selected' : ''; ?>><?php echo htmlspecialchars($template['title'] ?? ''); ?></option>
+                            <?php foreach ($allTemplates as $template): ?>
+                                <?php
+                                    $optionValue = ($template['scope'] ?? '') . '|' . ($template['id'] ?? '');
+                                    $label = $template['title'] ?? '';
+                                    if (($template['scope'] ?? '') === 'universal') {
+                                        $label = '[Global] ' . $label;
+                                    }
+                                ?>
+                                <option value="<?php echo htmlspecialchars($optionValue); ?>" <?php echo $selectedTemplateKey === $optionValue ? 'selected' : ''; ?>><?php echo htmlspecialchars($label); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

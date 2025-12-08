@@ -18,12 +18,21 @@ $users = ensure_status(getDepartmentUsers($deptId));
 $rolesData = read_json($deptPath . '/roles/roles.json');
 $roles = ensure_status(is_array($rolesData) ? $rolesData : []);
 
-$users = array_values(array_filter($users, function (array $user): bool {
-    return ($user['status'] ?? 'active') !== 'archived';
+$adminRoleId = 'admin.' . $deptId;
+
+$users = array_values(array_filter($users, function (array $user) use ($adminRoleId): bool {
+    if (($user['status'] ?? 'active') === 'archived') {
+        return false;
+    }
+    $roles = $user['roles'] ?? [];
+    return !in_array($adminRoleId, $roles, true);
 }));
 
-$roles = array_values(array_filter($roles, function (array $role): bool {
-    return ($role['status'] ?? 'active') !== 'archived';
+$roles = array_values(array_filter($roles, function (array $role) use ($adminRoleId): bool {
+    if (($role['status'] ?? 'active') === 'archived') {
+        return false;
+    }
+    return ($role['id'] ?? '') !== $adminRoleId;
 }));
 
 $statusMessage = null;

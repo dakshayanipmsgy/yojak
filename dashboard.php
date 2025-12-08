@@ -12,12 +12,16 @@ $deptId = $_SESSION['dept_id'] ?? null;
 
 $creationSuccess = null;
 $creationError = null;
+$governanceSuccess = null;
+$governanceError = null;
 $teamSuccess = null;
 $teamError = null;
 $inboxDocs = [];
 $outboxDocs = [];
 $deptUsersMap = [];
 $departments = [];
+$archivedDepartments = [];
+$pendingRequests = [];
 $deptMeta = [];
 $deptRoles = [];
 $deptUsers = [];
@@ -28,20 +32,96 @@ if ($roleId === 'superadmin') {
         mkdir($departmentsDir, 0755, true);
     }
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $deptName = trim($_POST['department_name'] ?? '');
-        $newDeptId = trim($_POST['department_id'] ?? '');
-        $deptPassword = $_POST['admin_password'] ?? '';
-        $adminUserId = trim($_POST['admin_user_id'] ?? '');
+    $requests = load_requests();
 
-        if ($deptName === '' || $newDeptId === '' || $deptPassword === '') {
-            $creationError = 'All fields are required to create a department.';
-        } else {
-            $result = createDepartment($deptName, $newDeptId, $deptPassword, $adminUserId);
-            if ($result['success']) {
-                $creationSuccess = $result['message'];
+    $postAction = $_POST['action'] ?? 'create_department';
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        if ($postAction === 'create_department') {
+            $deptName = trim($_POST['department_name'] ?? '');
+            $newDeptId = trim($_POST['department_id'] ?? '');
+            $deptPassword = $_POST['admin_password'] ?? '';
+            $adminUserId = trim($_POST['admin_user_id'] ?? '');
+
+            if ($deptName === '' || $newDeptId === '' || $deptPassword === '') {
+                $creationError = 'All fields are required to create a department.';
             } else {
-                $creationError = $result['message'];
+                $result = createDepartment($deptName, $newDeptId, $deptPassword, $adminUserId);
+                if ($result['success']) {
+                    $creationSuccess = $result['message'];
+                } else {
+                    $creationError = $result['message'];
+                }
+            }
+        } elseif ($postAction === 'dept_status') {
+            $targetDept = trim($_POST['target_dept'] ?? '');
+            $newStatus = $_POST['status'] ?? '';
+            if ($targetDept === '' || $newStatus === '') {
+                $governanceError = 'Invalid department status request.';
+            } else {
+                $result = update_entity_status($targetDept, 'department', $targetDept, $newStatus);
+                if ($result['success']) {
+                    $governanceSuccess = 'Department updated: ' . htmlspecialchars($targetDept) . ' set to ' . $newStatus . '.';
+                } else {
+                    $governanceError = $result['message'];
+                }
+            }
+        } elseif ($postAction === 'request_decision') {
+            $requestId = $_POST['request_id'] ?? '';
+            $decision = $_POST['decision'] ?? '';
+            $decisionNote = trim($_POST['decision_note'] ?? '');
+
+            $handled = false;
+            foreach ($requests as &$request) {
+                if (($request['id'] ?? '') !== $requestId || ($request['status'] ?? 'pending') !== 'pending') {
+                    continue;
+                }
+                $handled = true;
+
+                if (!in_array($decision, ['approved', 'rejected'], true)) {
+                    $governanceError = 'Unknown decision.';
+                    break;
+                }
+
+                if ($decision === 'approved') {
+                    $statusMap = [
+                        'Suspend' => 'suspended',
+                        'Archive' => 'archived',
+                    ];
+                    $requestedStatus = $statusMap[$request['action'] ?? ''] ?? null;
+                    if ($requestedStatus === null) {
+                        $governanceError = 'Invalid requested action.';
+                        break;
+                    }
+
+                    $updateResult = update_entity_status(
+                        $request['dept_id'] ?? '',
+                        $request['target_type'] ?? '',
+                        $request['target_id'] ?? '',
+                        $requestedStatus
+                    );
+
+                    if (!$updateResult['success']) {
+                        $governanceError = $updateResult['message'];
+                        break;
+                    }
+                }
+
+                $request['status'] = $decision;
+                $request['decided_at'] = date('c');
+                $request['decided_by'] = 'superadmin';
+                $request['decision_note'] = $decisionNote;
+                $governanceSuccess = 'Request ' . $decision . ' successfully.';
+                break;
+            }
+            unset($request);
+
+            if (!$handled && $governanceError === null) {
+                $governanceError = 'Request not found or already processed.';
+            }
+
+            if ($governanceError === null) {
+                save_requests($requests);
             }
         }
     }
@@ -61,6 +141,11 @@ if ($roleId === 'superadmin') {
 
             $meta = read_json($path . '/department.json') ?? [];
             $users = read_json($path . '/users/users.json') ?? [];
+            $users = ensure_status(is_array($users) ? $users : []);
+
+            $visibleUsers = array_filter($users, function (array $user): bool {
+                return ($user['status'] ?? 'active') !== 'archived';
+            });
 
             $fileCount = 0;
             $documentsPath = $path . '/documents';
@@ -79,15 +164,27 @@ if ($roleId === 'superadmin') {
                 'id' => $meta['id'] ?? $entry,
                 'name' => $meta['name'] ?? $entry,
                 'created_at' => $meta['created_at'] ?? date('c', filemtime($path)),
-                'user_count' => is_array($users) ? count($users) : 0,
+                'user_count' => count($visibleUsers),
                 'file_count' => $fileCount,
+                'status' => $meta['status'] ?? 'active',
             ];
         }
 
         return $departments;
     }
 
-    $departments = listDepartments($departmentsDir);
+    $departmentsAll = listDepartments($departmentsDir);
+    foreach ($departmentsAll as $deptItem) {
+        if (($deptItem['status'] ?? 'active') === 'archived') {
+            $archivedDepartments[] = $deptItem;
+        } else {
+            $departments[] = $deptItem;
+        }
+    }
+
+    $pendingRequests = array_filter($requests, function (array $request): bool {
+        return ($request['status'] ?? 'pending') === 'pending';
+    });
 } elseif ($roleId && $deptId && checkPermission('admin.' . $deptId)) {
     $deptPath = __DIR__ . '/storage/departments/' . $deptId;
     $metaPath = $deptPath . '/department.json';
@@ -104,6 +201,17 @@ if ($roleId === 'superadmin') {
     if (!is_array($deptUsers)) {
         $deptUsers = [];
     }
+
+    $deptRoles = ensure_status($deptRoles);
+    $deptUsers = ensure_status($deptUsers);
+
+    $deptRoles = array_values(array_filter($deptRoles, function (array $role): bool {
+        return ($role['status'] ?? 'active') !== 'archived';
+    }));
+
+    $deptUsers = array_values(array_filter($deptUsers, function (array $user): bool {
+        return ($user['status'] ?? 'active') !== 'archived';
+    }));
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
@@ -127,6 +235,7 @@ if ($roleId === 'superadmin') {
                         'id' => $newRoleId,
                         'name' => $roleName,
                         'permissions' => [],
+                        'status' => 'active',
                     ];
                     if (write_json($rolesPath, $deptRoles)) {
                         $teamSuccess = 'Role created successfully.';
@@ -165,7 +274,9 @@ $isGeneralUser = false;
     $deptPath = __DIR__ . '/storage/departments/' . $deptId;
     $metaPath = $deptPath . '/department.json';
     $deptMeta = read_json($metaPath) ?? ['id' => $deptId, 'name' => $deptId];
-    $deptUsers = getDepartmentUsers($deptId);
+    $deptUsers = array_values(array_filter(getDepartmentUsers($deptId), function (array $user): bool {
+        return ($user['status'] ?? 'active') !== 'archived';
+    }));
     foreach ($deptUsers as $user) {
         $deptUsersMap[$user['id'] ?? ''] = $user['name'] ?? ($user['id'] ?? '');
     }
@@ -265,10 +376,17 @@ $isGeneralUser = false;
                 <?php if ($creationSuccess): ?>
                     <div class="status success"><?php echo htmlspecialchars($creationSuccess); ?></div>
                 <?php endif; ?>
+                <?php if ($governanceError): ?>
+                    <div class="status error"><?php echo htmlspecialchars($governanceError); ?></div>
+                <?php endif; ?>
+                <?php if ($governanceSuccess): ?>
+                    <div class="status success"><?php echo htmlspecialchars($governanceSuccess); ?></div>
+                <?php endif; ?>
 
                 <div class="panel">
                     <h3>Create New Department</h3>
                     <form class="inline-form" method="post" autocomplete="off">
+                        <input type="hidden" name="action" value="create_department">
                         <div class="form-group">
                             <label for="department_name">Department Name</label>
                             <input id="department_name" name="department_name" type="text" placeholder="e.g., Road Construction Dept" required>
@@ -291,6 +409,46 @@ $isGeneralUser = false;
                 </div>
 
                 <div class="panel">
+                    <h3>Pending Requests</h3>
+                    <?php if (empty($pendingRequests)): ?>
+                        <p class="muted">No pending suspension/archive requests.</p>
+                    <?php else: ?>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Target</th>
+                                    <th>Action</th>
+                                    <th>Reason</th>
+                                    <th>Submitted</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($pendingRequests as $request): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($request['dept_id'] ?? ''); ?></td>
+                                        <td><?php echo htmlspecialchars(($request['target_type'] ?? '') . ': ' . ($request['target_id'] ?? '')); ?></td>
+                                        <td><span class="badge"><?php echo htmlspecialchars($request['action'] ?? ''); ?></span></td>
+                                        <td><?php echo htmlspecialchars($request['reason'] ?? ''); ?></td>
+                                        <td><?php echo htmlspecialchars(date('M d, Y H:i', strtotime($request['created_at'] ?? 'now'))); ?></td>
+                                        <td>
+                                            <form method="post" class="actions" style="gap:6px;" autocomplete="off">
+                                                <input type="hidden" name="action" value="request_decision">
+                                                <input type="hidden" name="request_id" value="<?php echo htmlspecialchars($request['id'] ?? ''); ?>">
+                                                <input type="hidden" name="decision_note" value="">
+                                                <button type="submit" name="decision" value="approved">Approve</button>
+                                                <button type="submit" name="decision" value="rejected" class="btn-secondary">Reject</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                </div>
+
+                <div class="panel">
                     <h3>Departments</h3>
                     <?php if (empty($departments)): ?>
                         <p class="muted">No departments created yet.</p>
@@ -302,6 +460,8 @@ $isGeneralUser = false;
                                     <th>Department ID</th>
                                     <th>Created Date</th>
                                     <th>User Count</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -314,6 +474,54 @@ $isGeneralUser = false;
                                         <td><span class="badge"><?php echo htmlspecialchars($dept['id']); ?></span></td>
                                         <td><?php echo htmlspecialchars(date('M d, Y H:i', strtotime($dept['created_at']))); ?></td>
                                         <td><?php echo (int) $dept['user_count']; ?></td>
+                                        <td><span class="badge"><?php echo htmlspecialchars($dept['status'] ?? 'active'); ?></span></td>
+                                        <td>
+                                            <form method="post" class="actions" style="gap:6px; flex-wrap:wrap;" autocomplete="off">
+                                                <input type="hidden" name="action" value="dept_status">
+                                                <input type="hidden" name="target_dept" value="<?php echo htmlspecialchars($dept['id']); ?>">
+                                                <button type="submit" name="status" value="suspended">Suspend</button>
+                                                <button type="submit" name="status" value="archived" class="btn-secondary">Archive</button>
+                                                <?php if (($dept['status'] ?? 'active') !== 'active'): ?>
+                                                    <button type="submit" name="status" value="active" class="btn-secondary">Activate</button>
+                                                <?php endif; ?>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php endif; ?>
+                </div>
+
+                <div class="panel">
+                    <h3>Archived Departments</h3>
+                    <?php if (empty($archivedDepartments)): ?>
+                        <p class="muted">No archived departments.</p>
+                    <?php else: ?>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>ID</th>
+                                    <th>Archived On</th>
+                                    <th>User Count</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($archivedDepartments as $dept): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($dept['name']); ?></td>
+                                        <td><span class="badge"><?php echo htmlspecialchars($dept['id']); ?></span></td>
+                                        <td><?php echo htmlspecialchars(date('M d, Y H:i', strtotime($dept['created_at']))); ?></td>
+                                        <td><?php echo (int) $dept['user_count']; ?></td>
+                                        <td>
+                                            <form method="post" class="actions" style="gap:6px;" autocomplete="off">
+                                                <input type="hidden" name="action" value="dept_status">
+                                                <input type="hidden" name="target_dept" value="<?php echo htmlspecialchars($dept['id']); ?>">
+                                                <button type="submit" name="status" value="active">Activate</button>
+                                            </form>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

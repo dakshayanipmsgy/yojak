@@ -9,6 +9,7 @@ $userId = $_SESSION['user_id'] ?? '';
 $roleId = $_SESSION['role_id'] ?? '';
 $isSuperadmin = $roleId === 'superadmin';
 $isAdmin = !$isSuperadmin && $deptId && checkPermission('admin.' . $deptId);
+$isClerk = !$isSuperadmin && strpos($roleId ?? '', 'clerk') !== false;
 
 $userDisplayName = $userId;
 if ($isSuperadmin) {
@@ -40,6 +41,14 @@ if ($isSuperadmin) {
         ['label' => 'Contractors', 'href' => 'manage_contractors.php'],
         ['label' => 'Templates', 'href' => 'manage_templates.php'],
         ['label' => 'Master Register', 'href' => 'master_register.php'],
+        ['label' => 'Request Action', 'href' => 'request_action.php'],
+        ['label' => 'Dak Register', 'href' => 'dak_service.php'],
+    ];
+} elseif ($isClerk) {
+    $centerLinks = [
+        ['label' => 'Dashboard', 'href' => 'dashboard.php'],
+        ['label' => 'Dak Register', 'href' => 'dak_service.php'],
+        ['label' => 'Create New Document', 'href' => 'create_document.php'],
     ];
 } else {
     $centerLinks = [

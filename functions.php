@@ -97,7 +97,35 @@ if (!function_exists('getDepartmentUsers')) {
     {
         $usersPath = __DIR__ . '/storage/departments/' . $deptId . '/users/users.json';
         $users = read_json($usersPath);
-        return is_array($users) ? $users : [];
+        if (!is_array($users)) {
+            return [];
+        }
+
+        return array_map(function (array $user): array {
+            if (!array_key_exists('status', $user)) {
+                $user['status'] = 'active';
+            }
+            return $user;
+        }, $users);
+    }
+}
+
+if (!function_exists('ensure_status')) {
+    /**
+     * Guarantee that each associative array contains a status key.
+     *
+     * @param array<int, array> $items
+     * @param string $default
+     * @return array<int, array>
+     */
+    function ensure_status(array $items, string $default = 'active'): array
+    {
+        return array_map(function (array $item) use ($default) {
+            if (!array_key_exists('status', $item)) {
+                $item['status'] = $default;
+            }
+            return $item;
+        }, $items);
     }
 }
 
@@ -159,6 +187,92 @@ if (!function_exists('append_master_log')) {
         $timestamp = date('c');
         $entry = '[' . $timestamp . '] ' . $line . PHP_EOL;
         file_put_contents($logPath, $entry, FILE_APPEND | LOCK_EX);
+    }
+}
+
+if (!function_exists('load_requests')) {
+    /**
+     * Load governance requests from central storage.
+     *
+     * @return array<int, array>
+     */
+    function load_requests(): array
+    {
+        $path = __DIR__ . '/storage/system/requests.json';
+        $requests = read_json($path);
+        if (!is_array($requests)) {
+            return [];
+        }
+
+        return array_map(function (array $request): array {
+            if (!array_key_exists('status', $request)) {
+                $request['status'] = 'pending';
+            }
+            return $request;
+        }, $requests);
+    }
+}
+
+if (!function_exists('save_requests')) {
+    /**
+     * Persist governance requests.
+     */
+    function save_requests(array $requests): bool
+    {
+        $path = __DIR__ . '/storage/system/requests.json';
+        return write_json($path, $requests);
+    }
+}
+
+if (!function_exists('update_entity_status')) {
+    /**
+     * Apply a status update to a department entity.
+     *
+     * @param string $deptId
+     * @param string $targetType user|role|department
+     * @param string $targetId
+     * @param string $newStatus
+     * @return array{success: bool, message: string}
+     */
+    function update_entity_status(string $deptId, string $targetType, string $targetId, string $newStatus): array
+    {
+        $deptPath = __DIR__ . '/storage/departments/' . $deptId;
+
+        if ($targetType === 'department') {
+            $metaPath = $deptPath . '/department.json';
+            $meta = read_json($metaPath) ?? ['id' => $deptId];
+            $meta['status'] = $newStatus;
+            return ['success' => write_json($metaPath, $meta), 'message' => 'Department status updated.'];
+        }
+
+        $filePath = $targetType === 'user'
+            ? $deptPath . '/users/users.json'
+            : $deptPath . '/roles/roles.json';
+
+        $items = read_json($filePath);
+        if (!is_array($items)) {
+            return ['success' => false, 'message' => 'Unable to load target store.'];
+        }
+
+        $updated = false;
+        foreach ($items as &$item) {
+            if (($item['id'] ?? '') === $targetId) {
+                $item['status'] = $newStatus;
+                $updated = true;
+                break;
+            }
+        }
+        unset($item);
+
+        if (!$updated) {
+            return ['success' => false, 'message' => 'Target not found.'];
+        }
+
+        if (!write_json($filePath, $items)) {
+            return ['success' => false, 'message' => 'Failed to persist status change.'];
+        }
+
+        return ['success' => true, 'message' => 'Status updated successfully.'];
     }
 }
 
@@ -318,6 +432,7 @@ if (!function_exists('createDepartment')) {
                 'id' => $roleId,
                 'name' => 'Department Administrator',
                 'permissions' => ['ALL'],
+                'status' => 'active',
             ],
         ];
 
@@ -334,6 +449,7 @@ if (!function_exists('createDepartment')) {
             'id' => $id,
             'name' => $name,
             'created_at' => date('c'),
+            'status' => 'active',
         ];
 
         $writes = [

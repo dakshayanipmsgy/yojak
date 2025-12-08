@@ -36,6 +36,17 @@ if (!is_dir($baseDeptPath)) {
     exit;
 }
 
+$departmentMeta = read_json($baseDeptPath . '/department.json') ?? [];
+if (($departmentMeta['status'] ?? 'active') === 'suspended') {
+    header('Location: index.php?error=' . urlencode('This department is suspended. Please contact the Superadmin.'));
+    exit;
+}
+
+if (($departmentMeta['status'] ?? 'active') === 'archived') {
+    header('Location: index.php?error=' . urlencode('This department is archived and cannot be accessed.'));
+    exit;
+}
+
 $usersPath = $baseDeptPath . '/users/users.json';
 $users = read_json($usersPath);
 
@@ -55,6 +66,24 @@ foreach ($users as $user) {
 if (!$matchedUser || !password_verify($password, $matchedUser['password_hash'] ?? '')) {
     header('Location: index.php?error=' . urlencode('Invalid credentials. Please check your details.'));
     exit;
+}
+
+if (($matchedUser['status'] ?? 'active') !== 'active') {
+    header('Location: index.php?error=' . urlencode('Your account is not active. Please contact your Department Administrator.'));
+    exit;
+}
+
+$rolesPath = $baseDeptPath . '/roles/roles.json';
+$roleData = read_json($rolesPath);
+$roles = ensure_status(is_array($roleData) ? $roleData : []);
+foreach ($roles as $role) {
+    if (($role['id'] ?? '') === ($matchedUser['roles'][0] ?? '')) {
+        if (($role['status'] ?? 'active') !== 'active') {
+            header('Location: index.php?error=' . urlencode('Your assigned role is not active. Please contact your Department Administrator.'));
+            exit;
+        }
+        break;
+    }
 }
 
 // Set session with scoped identifiers

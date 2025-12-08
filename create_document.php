@@ -27,11 +27,37 @@ if (!is_array($templates)) {
 $selectedContractorId = $_POST['contractor_id'] ?? '';
 $selectedTemplateId = $_POST['template_id'] ?? '';
 $generatedHtml = null;
+$renderedHtml = null;
 $errorMessage = null;
 $successMessage = null;
 $documentTitle = '';
-$deptUsers = getDepartmentUsers($deptId);
+$deptUsers = array_values(array_filter(getDepartmentUsers($deptId), function (array $user): bool {
+    return ($user['status'] ?? 'active') === 'active';
+}));
 $selectionDisabled = empty($contractors) || empty($templates);
+$includeHeader = isset($_POST['include_header']);
+
+$headerHtml = '<div class="official-header">'
+    . '<div class="header-left">'
+    . '<div class="logo-block">LOGO</div>'
+    . '</div>'
+    . '<div class="header-center">'
+    . '<div class="gov-name">Government of India</div>'
+    . '<div class="dept-name">' . htmlspecialchars($meta['name'] ?? $deptId) . '</div>'
+    . '</div>'
+    . '<div class="header-right">'
+    . '<div class="address-line">Official Correspondence</div>'
+    . '<div class="address-line">' . htmlspecialchars($deptId) . '</div>'
+    . '</div>'
+    . '</div><hr class="header-divider">';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && isset($_SESSION['dak_prefill'])) {
+    $prefill = $_SESSION['dak_prefill'];
+    $documentTitle = $prefill['title'] ?? 'Dak Draft';
+    $prefillBody = $prefill['body'] ?? '';
+    $generatedHtml = '<div class="dak-prefill"><pre>' . htmlspecialchars($prefillBody) . '</pre></div>';
+    unset($_SESSION['dak_prefill']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'generate';
@@ -49,10 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errorMessage = 'Document content is missing. Please regenerate the document.';
         } else {
             $docId = generate_document_id($deptPath);
+            $contentToStore = $includeHeader ? $headerHtml . $generatedHtml : $generatedHtml;
             $documentData = [
                 'id' => $docId,
                 'title' => $documentTitle,
-                'content' => $generatedHtml,
+                'content' => $contentToStore,
                 'created_by' => $_SESSION['user_id'],
                 'created_at' => date('c'),
                 'current_owner' => $_SESSION['user_id'],
@@ -129,6 +156,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+if ($generatedHtml) {
+    $renderedHtml = $includeHeader ? $headerHtml . $generatedHtml : $generatedHtml;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -137,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Document</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="print.css">
 </head>
 <body>
     <?php include __DIR__ . '/navbar.php'; ?>
@@ -199,6 +230,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input id="title" name="title" type="text" value="<?php echo htmlspecialchars($documentTitle); ?>" required>
                         </div>
                         <div class="form-group" style="width: 100%;">
+                            <label><input type="checkbox" name="include_header" <?php echo $includeHeader ? 'checked' : ''; ?>> Include Official Header?</label>
+                            <small class="muted">Adds the standard government header to the top of the print view.</small>
+                        </div>
+                        <div class="form-group" style="width: 100%;">
                             <label for="target_user_id">Forward To</label>
                             <select id="target_user_id" name="target_user_id">
                                 <option value="">Select user</option>
@@ -215,8 +250,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <button type="submit" name="action" value="send">Send</button>
                         </div>
                     </form>
-                    <div class="page">
-                        <?php echo $generatedHtml; ?>
+                    <div class="page page-a4">
+                        <?php echo $renderedHtml ?? $generatedHtml; ?>
                     </div>
                 </div>
             <?php endif; ?>

@@ -1,0 +1,80 @@
+.page {
+    margin: 10mm auto;
+    padding: 20mm;
+    border: 1px solid #d3d3d3;
+    background: #fff;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.page-a4 {
+    width: 210mm;
+    min-height: 297mm;
+}
+
+.page-legal {
+    width: 216mm;
+    min-height: 356mm;
+}
+
+.page-letter {
+    width: 216mm;
+    min-height: 279mm;
+}
+
+.official-header {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.header-left,
+.header-center,
+.header-right {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.logo-block {
+    width: 48px;
+    height: 48px;
+    border: 2px solid #1f4b99;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    color: #1f4b99;
+}
+
+.gov-name {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.dept-name {
+    font-weight: 700;
+}
+
+.header-divider {
+    border: none;
+    border-top: 2px solid #1f4b99;
+    margin: 8px 0 16px 0;
+}
+
+.page-break {
+    page-break-after: always;
+}
+
+@media print {
+    .page-break { page-break-after: always; }
+    body { -webkit-print-color-adjust: exact; }
+    .page {
+        margin: 0;
+        border: none;
+        box-shadow: none;
+        width: auto;
+        min-height: auto;
+    }
+}

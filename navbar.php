@@ -34,6 +34,8 @@ if ($isSuperadmin) {
     $centerLinks = [
         ['label' => 'Dashboard', 'href' => 'dashboard.php'],
         ['label' => 'Manage Users', 'href' => 'dashboard.php#manage-users'],
+        ['label' => 'Create User', 'href' => 'create_user.php'],
+        ['label' => 'Bulk Import', 'href' => 'bulk_upload.php'],
         ['label' => 'Manage Roles', 'href' => 'dashboard.php#manage-roles'],
         ['label' => 'Contractors', 'href' => 'manage_contractors.php'],
         ['label' => 'Templates', 'href' => 'manage_templates.php'],

@@ -32,11 +32,12 @@ if ($roleId === 'superadmin') {
         $deptName = trim($_POST['department_name'] ?? '');
         $newDeptId = trim($_POST['department_id'] ?? '');
         $deptPassword = $_POST['admin_password'] ?? '';
+        $adminUserId = trim($_POST['admin_user_id'] ?? '');
 
         if ($deptName === '' || $newDeptId === '' || $deptPassword === '') {
             $creationError = 'All fields are required to create a department.';
         } else {
-            $result = createDepartment($deptName, $newDeptId, $deptPassword);
+            $result = createDepartment($deptName, $newDeptId, $deptPassword, $adminUserId);
             if ($result['success']) {
                 $creationSuccess = $result['message'];
             } else {
@@ -135,35 +136,21 @@ if ($roleId === 'superadmin') {
                 }
             }
         } elseif ($action === 'add_user') {
-            $fullName = trim($_POST['full_name'] ?? '');
+            $firstName = trim($_POST['first_name'] ?? '');
+            $lastName = trim($_POST['last_name'] ?? '');
             $password = $_POST['password'] ?? '';
             $roleSelection = $_POST['role_id'] ?? '';
+            $customId = trim($_POST['user_id'] ?? '');
 
-            if ($fullName === '' || $password === '' || $roleSelection === '') {
+            if ($firstName === '' || $lastName === '' || $password === '' || $roleSelection === '') {
                 $teamError = 'All user fields are required.';
             } else {
-                $roleSlug = explode('.', $roleSelection)[0] ?? 'member';
-                $baseUserId = 'user.' . $roleSlug . '.' . $deptId;
-
-                $existingIds = array_column($deptUsers, 'id');
-                $userIdCandidate = $baseUserId;
-                $counter = 2;
-                while (in_array($userIdCandidate, $existingIds, true)) {
-                    $userIdCandidate = $baseUserId . '_' . $counter;
-                    $counter++;
-                }
-
-                $deptUsers[] = [
-                    'id' => $userIdCandidate,
-                    'name' => $fullName,
-                    'password_hash' => password_hash($password, PASSWORD_BCRYPT),
-                    'roles' => [$roleSelection],
-                ];
-
-                if (write_json($usersPath, $deptUsers)) {
-                    $teamSuccess = 'User created successfully with ID: ' . $userIdCandidate;
+                $result = createUser($deptId, $firstName, $lastName, $password, $roleSelection, $customId);
+                if ($result['success']) {
+                    $teamSuccess = $result['message'] . ' ID: ' . ($result['user_id'] ?? '');
+                    $deptUsers = getDepartmentUsers($deptId);
                 } else {
-                    $teamError = 'Unable to save new user.';
+                    $teamError = $result['message'];
                 }
             }
         }
@@ -289,6 +276,11 @@ $isGeneralUser = false;
                         <div class="form-group">
                             <label for="department_id">Department ID</label>
                             <input id="department_id" name="department_id" type="text" placeholder="e.g., road_dept" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="admin_user_id">Initial Admin User ID</label>
+                            <input id="admin_user_id" name="admin_user_id" type="text" placeholder="e.g., jdoe" aria-describedby="admin-user-help">
+                            <p id="admin-user-help" class="muted">If left empty, the default ID user.admin.{department_id} will be used.</p>
                         </div>
                         <div class="form-group">
                             <label for="admin_password">Initial Admin Password</label>
@@ -469,24 +461,38 @@ $isGeneralUser = false;
                         <h3>Manage Users</h3>
                         <form class="inline-form" method="post" autocomplete="off">
                             <input type="hidden" name="action" value="add_user">
-                            <div class="form-group">
-                                <label for="full_name">Full Name</label>
-                                <input id="full_name" name="full_name" type="text" placeholder="e.g., Priya Sharma" required>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="first_name">First Name</label>
+                                    <input id="first_name" name="first_name" type="text" placeholder="e.g., Priya" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="last_name">Last Name</label>
+                                    <input id="last_name" name="last_name" type="text" placeholder="e.g., Sharma" required>
+                                </div>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="user_id">User ID</label>
+                                    <input id="user_id" name="user_id" type="text" placeholder="e.g., psharma" required>
+                                    <p class="muted">Automatically suggests first initial + surname. You may edit before saving.</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="role_id">Assign Role</label>
+                                    <select id="role_id" name="role_id" required>
+                                        <option value="" disabled selected>Select Role</option>
+                                        <?php foreach ($deptRoles as $role): ?>
+                                            <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="password">Password</label>
                                 <input id="password" name="password" type="password" placeholder="Temporary password" required>
                             </div>
-                            <div class="form-group">
-                                <label for="role_id">Assign Role</label>
-                                <select id="role_id" name="role_id" required>
-                                    <option value="" disabled selected>Select Role</option>
-                                    <?php foreach ($deptRoles as $role): ?>
-                                        <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
                             <button type="submit">Create User</button>
+                            <a class="button-as-link" href="bulk_upload.php">Bulk Import</a>
                         </form>
 
                         <?php if (empty($deptUsers)): ?>
@@ -516,5 +522,33 @@ $isGeneralUser = false;
             <?php endif; ?>
         </section>
     </main>
+    <?php if ($roleId && $deptId && checkPermission('admin.' . $deptId)): ?>
+    <script>
+        const dashboardFirstName = document.getElementById('first_name');
+        const dashboardLastName = document.getElementById('last_name');
+        const dashboardUserId = document.getElementById('user_id');
+
+        if (dashboardFirstName && dashboardLastName && dashboardUserId) {
+            let dashboardUserIdTouched = false;
+
+            dashboardUserId.addEventListener('input', () => {
+                dashboardUserIdTouched = true;
+            });
+
+            const updateDashboardUserId = () => {
+                if (dashboardUserIdTouched) {
+                    return;
+                }
+                const first = dashboardFirstName.value.trim();
+                const last = dashboardLastName.value.trim();
+                const suggestion = (first.slice(0, 1) + last).toLowerCase().replace(/[^a-z0-9._-]/g, '');
+                dashboardUserId.value = suggestion;
+            };
+
+            dashboardFirstName.addEventListener('input', updateDashboardUserId);
+            dashboardLastName.addEventListener('input', updateDashboardUserId);
+        }
+    </script>
+    <?php endif; ?>
 </body>
 </html>

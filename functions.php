@@ -68,6 +68,24 @@ if (!function_exists('generate_id')) {
     }
 }
 
+if (!function_exists('generate_user_identifier')) {
+    /**
+     * Generate a user identifier suggestion from the given names.
+     */
+    function generate_user_identifier(string $firstName, string $lastName): string
+    {
+        $firstInitial = strtolower(substr(trim($firstName), 0, 1));
+        $lastPortion = strtolower(preg_replace('/[^a-z0-9]/', '', trim($lastName)));
+
+        $candidate = $firstInitial . $lastPortion;
+        if ($candidate === '') {
+            return 'user_' . strtolower(bin2hex(random_bytes(3)));
+        }
+
+        return $candidate;
+    }
+}
+
 if (!function_exists('getDepartmentUsers')) {
     /**
      * Retrieve all users for a given department.
@@ -249,9 +267,10 @@ if (!function_exists('createDepartment')) {
      * @param string $name
      * @param string $id
      * @param string $password
+     * @param string|null $adminUserId
      * @return array{success: bool, message: string}
      */
-    function createDepartment(string $name, string $id, string $password): array
+    function createDepartment(string $name, string $id, string $password, ?string $adminUserId = null): array
     {
         $id = strtolower(trim($id));
         $id = preg_replace('/[^a-z0-9_\-]/', '', $id ?? '');
@@ -282,7 +301,13 @@ if (!function_exists('createDepartment')) {
         }
 
         $roleId = 'admin.' . $id;
-        $userId = 'user.admin.' . $id;
+        $userId = $adminUserId !== null && $adminUserId !== ''
+            ? strtolower(preg_replace('/[^a-z0-9._-]/', '', trim($adminUserId)))
+            : 'user.admin.' . $id;
+
+        if ($userId === '') {
+            return ['success' => false, 'message' => 'Admin user ID cannot be empty.'];
+        }
 
         $rolesPath = "$basePath/roles/roles.json";
         $usersPath = "$basePath/users/users.json";
@@ -301,6 +326,7 @@ if (!function_exists('createDepartment')) {
                 'id' => $userId,
                 'password_hash' => password_hash($password, PASSWORD_BCRYPT),
                 'roles' => [$roleId],
+                'status' => 'active',
             ],
         ];
 
@@ -321,5 +347,63 @@ if (!function_exists('createDepartment')) {
         }
 
         return ['success' => true, 'message' => 'Department created successfully.'];
+    }
+}
+
+if (!function_exists('createUser')) {
+    /**
+     * Create a user within a department enforcing unique IDs and admin constraints.
+     *
+     * @param string $deptId
+     * @param string $firstName
+     * @param string $lastName
+     * @param string $password
+     * @param string $roleId
+     * @param string|null $customId
+     * @return array{success: bool, message: string, user_id?: string}
+     */
+    function createUser(string $deptId, string $firstName, string $lastName, string $password, string $roleId, ?string $customId = null): array
+    {
+        $deptUsers = getDepartmentUsers($deptId);
+
+        $userId = $customId !== null && $customId !== ''
+            ? strtolower(preg_replace('/[^a-z0-9._-]/', '', trim($customId)))
+            : generate_user_identifier($firstName, $lastName);
+
+        if ($userId === '') {
+            return ['success' => false, 'message' => 'User ID cannot be empty.'];
+        }
+
+        $existingIds = array_column($deptUsers, 'id');
+        if (in_array($userId, $existingIds, true)) {
+            return ['success' => false, 'message' => 'ID already taken.'];
+        }
+
+        $adminRoleId = 'admin.' . $deptId;
+        if ($roleId === $adminRoleId) {
+            foreach ($deptUsers as $user) {
+                $userRoles = $user['roles'] ?? [];
+                $status = $user['status'] ?? 'active';
+                if (in_array($adminRoleId, $userRoles, true) && $status === 'active') {
+                    return ['success' => false, 'message' => 'Critical: This department already has an active Administrator. Please archive or suspend the existing Admin before creating a new one.'];
+                }
+            }
+        }
+
+        $fullName = trim($firstName . ' ' . $lastName);
+        $deptUsers[] = [
+            'id' => $userId,
+            'name' => $fullName !== '' ? $fullName : $userId,
+            'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+            'roles' => [$roleId],
+            'status' => 'active',
+        ];
+
+        $usersPath = __DIR__ . '/storage/departments/' . $deptId . '/users/users.json';
+        if (!write_json($usersPath, $deptUsers)) {
+            return ['success' => false, 'message' => 'Unable to save new user.'];
+        }
+
+        return ['success' => true, 'message' => 'User created successfully.', 'user_id' => $userId];
     }
 }

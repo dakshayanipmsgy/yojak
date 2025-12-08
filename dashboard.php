@@ -165,9 +165,17 @@ if ($roleId === 'superadmin') {
             }
         }
     }
+$isGeneralUser = false;
 } else {
-    header('Location: index.php');
-    exit;
+    if (!$deptId) {
+        header('Location: index.php');
+        exit;
+    }
+
+    $deptPath = __DIR__ . '/storage/departments/' . $deptId;
+    $metaPath = $deptPath . '/department.json';
+    $deptMeta = read_json($metaPath) ?? ['id' => $deptId, 'name' => $deptId];
+    $isGeneralUser = true;
 }
 ?>
 <!DOCTYPE html>
@@ -260,92 +268,111 @@ if ($roleId === 'superadmin') {
                     </div>
                 </div>
 
-                <?php if ($teamError): ?>
-                    <div class="status error"><?php echo htmlspecialchars($teamError); ?></div>
-                <?php endif; ?>
-                <?php if ($teamSuccess): ?>
-                    <div class="status success"><?php echo htmlspecialchars($teamSuccess); ?></div>
-                <?php endif; ?>
-
-                <div class="panel">
-                    <h3>Manage Roles</h3>
-                    <form class="inline-form" method="post" autocomplete="off">
-                        <input type="hidden" name="action" value="add_role">
-                        <div class="form-group">
-                            <label for="role_name">Role Name</label>
-                            <input id="role_name" name="role_name" type="text" placeholder="e.g., Junior Engineer" required>
+                <?php if ($isGeneralUser): ?>
+                    <div class="panel">
+                        <h3>Welcome</h3>
+                        <p class="muted">Use the quick actions below to work with contractor templates.</p>
+                        <div class="actions" style="flex-wrap: wrap;">
+                            <a class="button-as-link" href="create_document.php">Generate Document</a>
                         </div>
-                        <button type="submit">Create Role</button>
-                    </form>
-                    <?php if (empty($deptRoles)): ?>
-                        <p class="muted">No roles defined yet.</p>
-                    <?php else: ?>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Role Name</th>
-                                    <th>Role ID</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($deptRoles as $role): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></td>
-                                        <td><span class="badge"><?php echo htmlspecialchars($role['id']); ?></span></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    </div>
+                <?php else: ?>
+                    <?php if ($teamError): ?>
+                        <div class="status error"><?php echo htmlspecialchars($teamError); ?></div>
                     <?php endif; ?>
-                </div>
-
-                <div class="panel">
-                    <h3>Manage Users</h3>
-                    <form class="inline-form" method="post" autocomplete="off">
-                        <input type="hidden" name="action" value="add_user">
-                        <div class="form-group">
-                            <label for="full_name">Full Name</label>
-                            <input id="full_name" name="full_name" type="text" placeholder="e.g., Priya Sharma" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input id="password" name="password" type="password" placeholder="Temporary password" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="role_id">Assign Role</label>
-                            <select id="role_id" name="role_id" required>
-                                <option value="" disabled selected>Select Role</option>
-                                <?php foreach ($deptRoles as $role): ?>
-                                    <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <button type="submit">Create User</button>
-                    </form>
-
-                    <?php if (empty($deptUsers)): ?>
-                        <p class="muted">No users created yet.</p>
-                    <?php else: ?>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>User ID</th>
-                                    <th>Name</th>
-                                    <th>Role</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($deptUsers as $user): ?>
-                                    <tr>
-                                        <td><span class="badge"><?php echo htmlspecialchars($user['id']); ?></span></td>
-                                        <td><?php echo htmlspecialchars($user['name'] ?? ''); ?></td>
-                                        <td><?php echo htmlspecialchars(($user['roles'][0] ?? '') ?: ''); ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <?php if ($teamSuccess): ?>
+                        <div class="status success"><?php echo htmlspecialchars($teamSuccess); ?></div>
                     <?php endif; ?>
-                </div>
+
+                    <div class="panel">
+                        <h3>Quick Actions</h3>
+                        <div class="actions" style="flex-wrap: wrap;">
+                            <a class="button-as-link" href="manage_contractors.php">Manage Contractors</a>
+                            <a class="button-as-link" href="manage_templates.php">Manage Templates</a>
+                            <a class="button-as-link" href="create_document.php">Generate Document</a>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h3>Manage Roles</h3>
+                        <form class="inline-form" method="post" autocomplete="off">
+                            <input type="hidden" name="action" value="add_role">
+                            <div class="form-group">
+                                <label for="role_name">Role Name</label>
+                                <input id="role_name" name="role_name" type="text" placeholder="e.g., Junior Engineer" required>
+                            </div>
+                            <button type="submit">Create Role</button>
+                        </form>
+                        <?php if (empty($deptRoles)): ?>
+                            <p class="muted">No roles defined yet.</p>
+                        <?php else: ?>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Role Name</th>
+                                        <th>Role ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($deptRoles as $role): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></td>
+                                            <td><span class="badge"><?php echo htmlspecialchars($role['id']); ?></span></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="panel">
+                        <h3>Manage Users</h3>
+                        <form class="inline-form" method="post" autocomplete="off">
+                            <input type="hidden" name="action" value="add_user">
+                            <div class="form-group">
+                                <label for="full_name">Full Name</label>
+                                <input id="full_name" name="full_name" type="text" placeholder="e.g., Priya Sharma" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Password</label>
+                                <input id="password" name="password" type="password" placeholder="Temporary password" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="role_id">Assign Role</label>
+                                <select id="role_id" name="role_id" required>
+                                    <option value="" disabled selected>Select Role</option>
+                                    <?php foreach ($deptRoles as $role): ?>
+                                        <option value="<?php echo htmlspecialchars($role['id']); ?>"><?php echo htmlspecialchars($role['name'] ?? $role['id']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <button type="submit">Create User</button>
+                        </form>
+
+                        <?php if (empty($deptUsers)): ?>
+                            <p class="muted">No users created yet.</p>
+                        <?php else: ?>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Name</th>
+                                        <th>Role</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($deptUsers as $user): ?>
+                                        <tr>
+                                            <td><span class="badge"><?php echo htmlspecialchars($user['id']); ?></span></td>
+                                            <td><?php echo htmlspecialchars($user['name'] ?? ''); ?></td>
+                                            <td><?php echo htmlspecialchars(($user['roles'][0] ?? '') ?: ''); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </section>
     </main>

@@ -68,6 +68,37 @@ if (!function_exists('generate_id')) {
     }
 }
 
+if (!function_exists('slugify_label')) {
+    /**
+     * Convert a human-readable label to a filesystem-safe slug.
+     */
+    function slugify_label(string $label): string
+    {
+        $slug = strtolower(trim($label));
+        $slug = preg_replace('/[^a-z0-9]+/', '_', $slug);
+        $slug = trim($slug, '_');
+        return $slug === '' ? 'item' : $slug;
+    }
+}
+
+if (!function_exists('checkPermission')) {
+    /**
+     * Verify a user has the required role (or is superadmin).
+     */
+    function checkPermission(string $required_role): bool
+    {
+        if (!isset($_SESSION['role_id'])) {
+            return false;
+        }
+
+        if ($_SESSION['role_id'] === 'superadmin') {
+            return true;
+        }
+
+        return $_SESSION['role_id'] === $required_role;
+    }
+}
+
 if (!function_exists('createDepartment')) {
     /**
      * Create a new department with the required folder and bootstrap files.

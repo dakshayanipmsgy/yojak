@@ -1,35 +1,11 @@
 <?php
 session_start();
-require_once __DIR__ . '/functions.php';
 
-const GLOBAL_CONFIG_PATH = __DIR__ . '/storage/system/global_config.json';
+$authError = $_GET['error'] ?? null;
+$authSuccess = $_GET['success'] ?? null;
 
-$authError = null;
-$authSuccess = null;
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $departmentId = trim($_POST['department_id'] ?? '');
-    $userId = trim($_POST['user_id'] ?? '');
-    $password = $_POST['password'] ?? '';
-
-    $config = read_json(GLOBAL_CONFIG_PATH) ?? [];
-    $superadmin = $config['superadmin'] ?? null;
-
-    if ($superadmin && $userId === ($superadmin['username'] ?? '') && password_verify($password, $superadmin['password_hash'] ?? '')) {
-        $_SESSION['user'] = [
-            'role' => 'superadmin',
-            'username' => $userId,
-            'department' => $departmentId,
-        ];
-        header('Location: dashboard.php');
-        exit;
-    } else {
-        $authError = 'Invalid credentials. Please check your details.';
-    }
-}
-
-$isLoggedIn = isset($_SESSION['user']);
-if ($isLoggedIn && ($_SESSION['user']['role'] ?? '') === 'superadmin') {
+$isLoggedIn = isset($_SESSION['user_id'], $_SESSION['role_id']);
+if ($isLoggedIn) {
     header('Location: dashboard.php');
     exit;
 }
@@ -62,7 +38,7 @@ if ($isLoggedIn && ($_SESSION['user']['role'] ?? '') === 'superadmin') {
                     <div class="status success"><?php echo htmlspecialchars($authSuccess); ?></div>
                 <?php endif; ?>
 
-                <form method="post" autocomplete="off">
+                <form method="post" action="login.php" autocomplete="off">
                     <div class="form-group">
                         <label for="department_id">Department ID</label>
                         <input id="department_id" name="department_id" type="text" placeholder="e.g., IT-001" required>

@@ -127,6 +127,7 @@ if (!function_exists('createDepartment')) {
             "$basePath/users",
             "$basePath/roles",
             "$basePath/documents",
+            "$basePath/data",
             "$basePath/templates",
             "$basePath/logs",
         ];

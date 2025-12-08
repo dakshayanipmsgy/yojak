@@ -37,6 +37,7 @@ if ($isSuperadmin) {
         ['label' => 'Manage Roles', 'href' => 'dashboard.php#manage-roles'],
         ['label' => 'Contractors', 'href' => 'manage_contractors.php'],
         ['label' => 'Templates', 'href' => 'manage_templates.php'],
+        ['label' => 'Master Register', 'href' => 'master_register.php'],
     ];
 } else {
     $centerLinks = [
@@ -57,6 +58,12 @@ if ($isSuperadmin) {
         <?php endforeach; ?>
     </div>
     <div class="navbar-right">
+        <?php if ($deptId): ?>
+            <form class="navbar-search" action="search.php" method="get" autocomplete="off">
+                <input type="text" name="q" placeholder="Search by ID or Title" value="<?php echo isset($_GET['q']) ? htmlspecialchars($_GET['q']) : ''; ?>" required>
+                <button type="submit">Search</button>
+            </form>
+        <?php endif; ?>
         <span class="welcome">Welcome, <?php echo htmlspecialchars($userDisplayName); ?></span>
         <a class="nav-link" href="profile.php">My Profile</a>
         <a class="nav-button" href="logout.php">Logout</a>

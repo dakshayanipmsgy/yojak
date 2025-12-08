@@ -80,6 +80,29 @@ body {
     border: 1px solid var(--primary-dark);
 }
 
+.navbar-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.navbar-search input {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 180px;
+}
+
+.navbar-search button {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    border: 1px solid var(--primary-dark);
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .welcome {
     color: var(--muted);
     font-weight: 600;
@@ -180,6 +203,10 @@ body {
     color: var(--muted);
     font-weight: 700;
     font-size: 0.95rem;
+}
+
+.row-warning {
+    background: #ffecec;
 }
 
 .badge {

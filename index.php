@@ -21,13 +21,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'username' => $userId,
             'department' => $departmentId,
         ];
-        $authSuccess = 'Authenticated successfully. (Session stubbed for future dashboard.)';
+        header('Location: dashboard.php');
+        exit;
     } else {
         $authError = 'Invalid credentials. Please check your details.';
     }
 }
 
 $isLoggedIn = isset($_SESSION['user']);
+if ($isLoggedIn && ($_SESSION['user']['role'] ?? '') === 'superadmin') {
+    header('Location: dashboard.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

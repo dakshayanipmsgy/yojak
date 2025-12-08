@@ -67,3 +67,84 @@ if (!function_exists('generate_id')) {
         }
     }
 }
+
+if (!function_exists('createDepartment')) {
+    /**
+     * Create a new department with the required folder and bootstrap files.
+     *
+     * @param string $name
+     * @param string $id
+     * @param string $password
+     * @return array{success: bool, message: string}
+     */
+    function createDepartment(string $name, string $id, string $password): array
+    {
+        $id = strtolower(trim($id));
+        $id = preg_replace('/[^a-z0-9_\-]/', '', $id ?? '');
+
+        if ($id === '') {
+            return ['success' => false, 'message' => 'Department ID cannot be empty.'];
+        }
+
+        $basePath = __DIR__ . '/storage/departments/' . $id;
+        if (is_dir($basePath)) {
+            return ['success' => false, 'message' => 'Department ID already exists.'];
+        }
+
+        $structure = [
+            $basePath,
+            "$basePath/users",
+            "$basePath/roles",
+            "$basePath/documents",
+            "$basePath/templates",
+            "$basePath/logs",
+        ];
+
+        foreach ($structure as $dir) {
+            if (!mkdir($dir, 0755, true) && !is_dir($dir)) {
+                return ['success' => false, 'message' => 'Failed to create department directories.'];
+            }
+        }
+
+        $roleId = 'admin.' . $id;
+        $userId = 'user.admin.' . $id;
+
+        $rolesPath = "$basePath/roles/roles.json";
+        $usersPath = "$basePath/users/users.json";
+        $metaPath = "$basePath/department.json";
+
+        $roleData = [
+            [
+                'id' => $roleId,
+                'name' => 'Department Administrator',
+                'permissions' => ['ALL'],
+            ],
+        ];
+
+        $userData = [
+            [
+                'id' => $userId,
+                'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+                'roles' => [$roleId],
+            ],
+        ];
+
+        $metaData = [
+            'id' => $id,
+            'name' => $name,
+            'created_at' => date('c'),
+        ];
+
+        $writes = [
+            write_json($rolesPath, $roleData),
+            write_json($usersPath, $userData),
+            write_json($metaPath, $metaData),
+        ];
+
+        if (in_array(false, $writes, true)) {
+            return ['success' => false, 'message' => 'Failed to write department bootstrap files.'];
+        }
+
+        return ['success' => true, 'message' => 'Department created successfully.'];
+    }
+}

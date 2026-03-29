@@ -149,6 +149,33 @@ class BootstrapService
             ], ['pm_surya_ghar'], $plan['plan_key'], 'monthly', 14, 'ADM-0001', true, $vendor);
         }
 
+
+        $subscriptions = RegistryService::get('subscriptions');
+        if (!RegistryService::findBy($subscriptions, 'vendor_id', 'VND-0001')) {
+            $subscriptions[] = [
+                'subscription_id' => 'SUB-0001',
+                'vendor_id' => 'VND-0001',
+                'tenant_id' => 'TNT-0001',
+                'scheme_key' => 'pm_surya_ghar',
+                'plan_key' => 'growth',
+                'billing_cycle' => 'monthly',
+                'subscription_status' => 'trial',
+                'started_at' => date('c'),
+                'trial_started_at' => date('c'),
+                'trial_ends_at' => date('c', strtotime('+14 days')),
+                'active_from' => null,
+                'active_until' => null,
+                'cancelled_at' => null,
+                'override_pricing_json' => [],
+                'entitled_modules' => array_values(array_unique(array_merge($plan['included_modules'] ?? [], ['dashboard','company-branding','subscription-billing']))),
+                'source_type' => 'seed',
+                'source_ref' => 'SEED',
+                'created_at' => date('c'),
+                'updated_at' => date('c'),
+            ];
+            RegistryService::put('subscriptions', $subscriptions);
+        }
+
         $pending = RegistryService::get('pending_signups');
         if (!RegistryService::findBy($pending, 'email', 'pending@demo.local')) {
             $pending[] = [

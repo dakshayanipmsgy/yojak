@@ -6,10 +6,11 @@ require __DIR__ . '/../app/bootstrap.php';
 
 use App\Services\AccessService;
 use App\Services\AuditService;
-use App\Services\CounterService;
 use App\Services\AuthService;
 use App\Services\ProvisioningService;
 use App\Services\RegistryService;
+use App\Services\SessionService;
+use App\Services\SignupService;
 
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 $method = $_SERVER['REQUEST_METHOD'];
@@ -28,11 +29,22 @@ function redirectTo(string $url): void
     exit;
 }
 
-function requireAdmin(): void
+function requireCsrfOrAbort(): void
 {
-    if (!AuthService::admin()) {
+    if (!SessionService::validateCsrf($_POST['csrf_token'] ?? null)) {
+        http_response_code(422);
+        echo 'Invalid CSRF token';
+        exit;
+    }
+}
+
+function requireAdmin(): array
+{
+    $admin = AuthService::admin();
+    if (!$admin) {
         redirectTo('/admin/login');
     }
+    return $admin;
 }
 
 function requireVendor(): array
@@ -41,129 +53,129 @@ function requireVendor(): array
     if (!$vendor) {
         redirectTo('/login');
     }
-    if (!AccessService::canAccessVendorWorkspace($vendor)) {
-        AuthService::logoutAll();
-        redirectTo('/login?error=blocked');
+
+    $access = AccessService::evaluateVendorAccess($vendor);
+    if (!$access['is_allowed']) {
+        AuthService::logoutVendor();
+        redirectTo('/login?error=' . urlencode((string) $access['blocked_message']));
     }
+
     return $vendor;
 }
 
-function modulePage(string $moduleKey, string $title, string $description): void
+function requireSchemeAccess(array $vendor, string $schemeKey): void
 {
-    $vendor = requireVendor();
-    $schemeKey = 'pm_surya_ghar';
-    if (!AccessService::hasSchemeAccess($vendor, $schemeKey) || !AccessService::hasModuleAccess($vendor, $moduleKey)) {
+    if (!AccessService::hasSchemeAccess($vendor, $schemeKey)) {
+        AuditService::log('unauthorized_scheme_access_attempt', 'vendor', $vendor['vendor_id'] ?? null, 'scheme', $schemeKey, 'Unauthorized scheme access attempt.');
         http_response_code(403);
-        render('Access denied', 'module', compact('vendor', 'moduleKey', 'schemeKey', 'title', 'description'), 'vendor');
+        render('Access denied', 'module', ['vendor' => $vendor, 'moduleKey' => 'scheme', 'schemeKey' => $schemeKey, 'title' => 'Access denied', 'description' => AccessService::blockedMessage('no_scheme_access')], 'vendor');
     }
-    render($title, 'module', compact('vendor', 'moduleKey', 'schemeKey', 'title', 'description'), 'vendor');
+}
+
+function requireModuleAccess(array $vendor, string $schemeKey, string $moduleKey): void
+{
+    requireSchemeAccess($vendor, $schemeKey);
+    if (!AccessService::hasModuleAccess($vendor, $moduleKey, $schemeKey)) {
+        AuditService::log('unauthorized_module_access_attempt', 'vendor', $vendor['vendor_id'] ?? null, 'module', $moduleKey, 'Unauthorized module access attempt.', ['scheme_key' => $schemeKey]);
+        http_response_code(403);
+        render('Access denied', 'module', ['vendor' => $vendor, 'moduleKey' => $moduleKey, 'schemeKey' => $schemeKey, 'title' => 'Access denied', 'description' => 'You do not have access to this section.'], 'vendor');
+    }
 }
 
 $schemes = RegistryService::get('schemes');
 $modules = RegistryService::get('modules');
 $plans = RegistryService::get('plans');
-$settingsRow = RegistryService::get('superadmin_settings');
-$settings = $settingsRow[0] ?? [];
+$settings = RegistryService::get('superadmin_settings')[0] ?? [];
+$csrfToken = SessionService::csrfToken();
 
 if ($path === '/logout') {
-    AuthService::logoutAll();
-    session_start();
+    AuthService::logoutVendor();
     redirectTo('/login');
 }
-
-if ($path === '/' || $path === '/homepage') {
-    render('Yojak - Platform', 'home', compact('schemes', 'settings'));
+if ($path === '/admin/logout') {
+    AuthService::logoutAdmin();
+    redirectTo('/admin/login');
 }
+
+if ($path === '/' || $path === '/homepage') render('Yojak - Platform', 'home', compact('schemes', 'settings'));
 if ($path === '/schemes') {
     $publicSchemes = array_values(array_filter($schemes, fn($s) => !empty($s['public_visible']) && !empty($s['active_flag'])));
     render('Schemes', 'schemes', compact('publicSchemes'));
 }
-if ($path === '/scheme/pm-surya-ghar') {
-    $scheme = RegistryService::getSchemeByKey('pm_surya_ghar');
-    render('PM Surya Ghar', 'scheme', compact('scheme', 'plans'));
-}
-if ($path === '/pricing') {
-    render('Pricing', 'pricing', compact('plans'));
-}
-if ($path === '/signup') {
-    redirectTo('/signup/pm-surya-ghar');
-}
+if ($path === '/scheme/pm-surya-ghar') render('PM Surya Ghar', 'scheme', ['scheme' => RegistryService::getSchemeByKey('pm_surya_ghar'), 'plans' => $plans]);
+if ($path === '/pricing') render('Pricing', 'pricing', compact('plans'));
+if ($path === '/signup') redirectTo('/signup/pm-surya-ghar');
+
 if ($path === '/signup/pm-surya-ghar' && $method === 'GET') {
-    render('Vendor Signup', 'signup', []);
+    render('Vendor Signup', 'signup', ['csrfToken' => $csrfToken, 'settings' => $settings, 'scheme' => RegistryService::getSchemeByKey('pm_surya_ghar')]);
 }
 if ($path === '/signup/pm-surya-ghar' && $method === 'POST') {
-    $required = ['owner_name', 'company_name', 'mobile', 'email', 'city', 'state', 'password'];
-    foreach ($required as $field) {
-        if (empty($_POST[$field])) {
-            render('Vendor Signup', 'signup', ['error' => 'Please fill all required fields.']);
-        }
+    requireCsrfOrAbort();
+    $scheme = RegistryService::getSchemeByKey('pm_surya_ghar');
+    [$ok, $error] = SignupService::validateSignupInput($_POST, $settings, $scheme);
+    if (!$ok) {
+        render('Vendor Signup', 'signup', ['error' => $error, 'csrfToken' => $csrfToken, 'settings' => $settings, 'scheme' => $scheme]);
     }
+
     $pending = RegistryService::get('pending_signups');
     $vendors = RegistryService::get('vendors');
-    $email = strtolower(trim($_POST['email']));
-    $mobile = trim($_POST['mobile']);
-
-    foreach (array_merge($pending, $vendors) as $r) {
-        if (($r['email'] ?? '') === $email || ($r['mobile'] ?? '') === $mobile) {
-            render('Vendor Signup', 'signup', ['error' => 'Email or mobile already exists.']);
-        }
+    $email = SignupService::normalizeEmail((string) ($_POST['email'] ?? ''));
+    $mobile = SignupService::normalizeMobile((string) ($_POST['mobile'] ?? ''));
+    $duplicate = SignupService::findDuplicate($pending, $vendors, $email, $mobile);
+    if ($duplicate) {
+        render('Vendor Signup', 'signup', ['error' => $duplicate, 'csrfToken' => $csrfToken, 'settings' => $settings, 'scheme' => $scheme]);
     }
 
-    $signup = [
-        'signup_id' => CounterService::next('signup'),
-        'requested_scheme_key' => 'pm_surya_ghar',
-        'owner_name' => htmlspecialchars(trim($_POST['owner_name'])),
-        'company_name' => htmlspecialchars(trim($_POST['company_name'])),
-        'mobile' => htmlspecialchars($mobile),
-        'email' => htmlspecialchars($email),
-        'city' => htmlspecialchars(trim($_POST['city'])),
-        'state' => htmlspecialchars(trim($_POST['state'])),
-        'address' => htmlspecialchars(trim($_POST['address'] ?? '')),
-        'business_details' => htmlspecialchars(trim($_POST['business_details'] ?? '')),
-        'gst_number' => htmlspecialchars(trim($_POST['gst_number'] ?? '')),
-        'website' => htmlspecialchars(trim($_POST['website'] ?? '')),
-        'notes' => htmlspecialchars(trim($_POST['notes'] ?? '')),
-        'password_hash' => password_hash($_POST['password'], PASSWORD_DEFAULT),
-        'verification_status' => 'pending',
-        'account_status' => 'inactive',
-        'subscription_status' => 'none',
-        'requested_plan_key' => 'growth',
-        'status' => 'pending',
-        'submitted_at' => date('c'),
-    ];
+    $signup = SignupService::buildPendingSignup($_POST, 'pm_surya_ghar');
     $pending[] = $signup;
     RegistryService::put('pending_signups', $pending);
-    AuditService::log('signup_submitted', 'vendor', null, 'signup', $signup['signup_id'], 'Signup submitted.', ['email' => $signup['email']]);
-    render('Vendor Signup', 'signup', ['success' => 'Signup received. Waiting for superadmin verification.']);
+    AuditService::log('signup_submitted', 'vendor', null, 'signup', $signup['signup_id'], 'Signup submitted.', ['email' => $signup['email'], 'mobile' => $signup['mobile']]);
+
+    render('Vendor Signup', 'signup', ['success' => 'Signup received. Your account is pending superadmin verification. Login is unavailable until approval.', 'csrfToken' => $csrfToken, 'settings' => $settings, 'scheme' => $scheme]);
 }
+
 if ($path === '/login' && $method === 'GET') {
-    render('Vendor Login', 'login', ['error' => $_GET['error'] ?? null]);
-}
-if ($path === '/login' && $method === 'POST') {
-    [$ok, $error] = AuthService::loginVendor(strtolower(trim($_POST['email'] ?? '')), (string) ($_POST['password'] ?? ''));
-    if ($ok) {
+    if (AuthService::vendor()) {
         redirectTo('/app/dashboard');
     }
-    render('Vendor Login', 'login', compact('error'));
+    render('Vendor Login', 'login', ['error' => $_GET['error'] ?? null, 'csrfToken' => $csrfToken]);
 }
+if ($path === '/login' && $method === 'POST') {
+    requireCsrfOrAbort();
+    [$ok, $error] = AuthService::loginVendor((string) ($_POST['identifier'] ?? ''), (string) ($_POST['password'] ?? ''));
+    if ($ok) {
+        $vendor = AuthService::vendor();
+        $schemeKey = $vendor['default_scheme_key'] ?? (($vendor['enabled_schemes'][0] ?? null));
+        if ($schemeKey && AccessService::hasSchemeAccess($vendor, $schemeKey)) {
+            redirectTo('/app/' . str_replace('_', '-', $schemeKey) . '/dashboard');
+        }
+        redirectTo('/app/dashboard');
+    }
+    render('Vendor Login', 'login', compact('error', 'csrfToken'));
+}
+
 if ($path === '/admin/login' && $method === 'GET') {
-    render('Admin Login', 'login', ['admin' => true]);
-}
-if ($path === '/admin/login' && $method === 'POST') {
-    if (AuthService::loginAdmin(strtolower(trim($_POST['email'] ?? '')), (string) ($_POST['password'] ?? ''))) {
+    if (AuthService::admin()) {
         redirectTo('/admin/dashboard');
     }
-    render('Admin Login', 'login', ['admin' => true, 'error' => 'Invalid credentials']);
+    render('Admin Login', 'login', ['admin' => true, 'csrfToken' => $csrfToken]);
+}
+if ($path === '/admin/login' && $method === 'POST') {
+    requireCsrfOrAbort();
+    if (AuthService::loginAdmin((string) ($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''))) {
+        redirectTo('/admin/dashboard');
+    }
+    render('Admin Login', 'login', ['admin' => true, 'error' => 'Invalid credentials', 'csrfToken' => $csrfToken]);
 }
 
 if (str_starts_with($path, '/admin')) {
-    requireAdmin();
+    $admin = requireAdmin();
     $vendors = RegistryService::get('vendors');
     $pending = RegistryService::get('pending_signups');
 
     if ($path === '/admin' || $path === '/admin/dashboard') {
         $counts = [
-            'pending' => count(array_filter($pending, fn($p) => ($p['status'] ?? '') === 'pending')),
+            'pending' => count(array_filter($pending, fn($p) => ($p['verification_status'] ?? 'pending') === 'pending')),
             'vendors' => count($vendors),
             'verified' => count(array_filter($vendors, fn($v) => ($v['verification_status'] ?? '') === 'verified')),
             'active' => count(array_filter($vendors, fn($v) => ($v['account_status'] ?? '') === 'active')),
@@ -177,61 +189,92 @@ if (str_starts_with($path, '/admin')) {
 
     if ($path === '/admin/pending-signups') {
         if ($method === 'POST' && isset($_POST['action'], $_POST['signup_id'])) {
+            requireCsrfOrAbort();
             foreach ($pending as &$row) {
-                if ($row['signup_id'] === $_POST['signup_id'] && ($row['status'] ?? '') === 'pending') {
-                    if ($_POST['action'] === 'reject') {
-                        $row['status'] = 'rejected';
-                        $row['verification_status'] = 'rejected';
-                        $row['processed_at'] = date('c');
-                        $row['processed_by'] = AuthService::admin()['admin_id'] ?? 'ADM-0001';
-                        $row['process_note'] = 'Rejected by admin';
-                        AuditService::log('signup_rejected', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'signup', $row['signup_id'], 'Signup rejected.');
-                    }
-                    if ($_POST['action'] === 'verify') {
-                        $plan = RegistryService::findBy($plans, 'plan_key', 'growth') ?? $plans[0];
-                        $vendor = ProvisioningService::provisionTenantForApprovedSignup(
-                            $row,
-                            ['pm_surya_ghar'],
-                            $plan['plan_key'],
-                            'monthly',
-                            (int) ($plan['trial_days'] ?? 14),
-                            AuthService::admin()['admin_id'] ?? 'ADM-0001'
-                        );
-                        $row['status'] = 'verified';
-                        AuditService::log('signup_verified', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $vendor['vendor_id'], 'Signup verified and provisioned.', ['signup_id' => $row['signup_id']]);
-                    }
+                if (($row['signup_id'] ?? '') !== $_POST['signup_id']) {
+                    continue;
                 }
+                if (($row['verification_status'] ?? 'pending') !== 'pending') {
+                    break;
+                }
+
+                if ($_POST['action'] === 'reject') {
+                    $row['verification_status'] = 'rejected';
+                    $row['processed_at'] = date('c');
+                    $row['processed_by'] = $admin['admin_id'];
+                    $row['process_note'] = SignupService::sanitizeText((string) ($_POST['process_note'] ?? 'Rejected by admin'));
+                    AuditService::log('signup_rejected', 'admin', $admin['admin_id'], 'signup', $row['signup_id'], 'Signup rejected.');
+                }
+
+                if ($_POST['action'] === 'verify') {
+                    $planKey = (string) ($settings['default_trial_plan_key'] ?? 'growth');
+                    $plan = RegistryService::getPlanByKey($planKey) ?? ($plans[0] ?? ['plan_key' => 'growth', 'trial_days' => 14]);
+                    $vendor = ProvisioningService::provisionTenantForApprovedSignup(
+                        $row,
+                        ['pm_surya_ghar'],
+                        (string) ($plan['plan_key'] ?? 'growth'),
+                        (string) ($settings['default_billing_cycle'] ?? 'monthly'),
+                        (int) ($plan['trial_days'] ?? 14),
+                        $admin['admin_id'],
+                        true
+                    );
+                    $row['verification_status'] = 'verified';
+                    $row['processed_at'] = date('c');
+                    $row['processed_by'] = $admin['admin_id'];
+                    $row['process_note'] = 'Verified and provisioned as vendor ' . $vendor['vendor_id'];
+                    AuditService::log('signup_verified', 'admin', $admin['admin_id'], 'vendor', $vendor['vendor_id'], 'Signup verified and provisioned.', ['signup_id' => $row['signup_id']]);
+                }
+                break;
             }
             unset($row);
             RegistryService::put('pending_signups', $pending);
             redirectTo('/admin/pending-signups');
         }
-        render('Pending Signups', 'pending_signups', compact('pending'), 'admin');
+        render('Pending Signups', 'pending_signups', compact('pending', 'csrfToken'), 'admin');
     }
 
     if ($path === '/admin/vendors') {
         if ($method === 'POST' && isset($_POST['vendor_id'], $_POST['action'])) {
+            requireCsrfOrAbort();
+            $subscriptions = RegistryService::get('subscriptions');
             foreach ($vendors as &$v) {
-                if ($v['vendor_id'] === $_POST['vendor_id']) {
-                    if ($_POST['action'] === 'suspend') {
-                        $v['account_status'] = 'suspended';
-                        AuditService::log('vendor_suspended', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $v['vendor_id'], 'Vendor suspended.');
-                    }
-                    if ($_POST['action'] === 'activate') {
-                        $v['account_status'] = 'active';
-                        AuditService::log('vendor_activated', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $v['vendor_id'], 'Vendor activated.');
-                    }
-                    if ($_POST['action'] === 'cancel') {
-                        $v['account_status'] = 'cancelled';
-                        AuditService::log('vendor_cancelled', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $v['vendor_id'], 'Vendor cancelled.');
-                    }
+                if (($v['vendor_id'] ?? '') !== $_POST['vendor_id']) {
+                    continue;
                 }
+                if ($_POST['action'] === 'suspend') {
+                    $v['account_status'] = 'suspended';
+                    AuditService::log('vendor_suspended', 'admin', $admin['admin_id'], 'vendor', $v['vendor_id'], 'Vendor suspended.');
+                }
+                if ($_POST['action'] === 'activate' && ($v['verification_status'] ?? '') === 'verified') {
+                    $v['account_status'] = 'active';
+                    AuditService::log('vendor_activated', 'admin', $admin['admin_id'], 'vendor', $v['vendor_id'], 'Vendor activated.');
+                }
+                if ($_POST['action'] === 'cancel') {
+                    $v['account_status'] = 'cancelled';
+                    foreach ($subscriptions as &$sub) {
+                        if (($sub['vendor_id'] ?? '') === $v['vendor_id']) {
+                            $sub['subscription_status'] = 'cancelled';
+                            $sub['cancelled_at'] = date('c');
+                            $sub['updated_at'] = date('c');
+                        }
+                    }
+                    unset($sub);
+                    AuditService::log('vendor_cancelled', 'admin', $admin['admin_id'], 'vendor', $v['vendor_id'], 'Vendor cancelled.');
+                }
+                $v['updated_at'] = date('c');
+                break;
             }
             unset($v);
             RegistryService::put('vendors', $vendors);
+            RegistryService::put('subscriptions', $subscriptions);
             redirectTo('/admin/vendors');
         }
-        render('Vendors', 'vendors', compact('vendors'), 'admin');
+
+        $subscriptionsByVendor = [];
+        foreach (RegistryService::get('subscriptions') as $sub) {
+            $subscriptionsByVendor[$sub['vendor_id']] = $sub;
+        }
+        render('Vendors', 'vendors', compact('vendors', 'subscriptionsByVendor', 'csrfToken'), 'admin');
     }
 
     if ($path === '/admin/schemes') render('Schemes', 'schemes', compact('schemes'), 'admin');
@@ -239,13 +282,14 @@ if (str_starts_with($path, '/admin')) {
     if ($path === '/admin/plans') render('Plans', 'plans', compact('plans'), 'admin');
     if ($path === '/admin/settings') {
         if ($method === 'POST') {
-            $settings['platform_name'] = trim($_POST['platform_name'] ?? 'Yojak');
+            requireCsrfOrAbort();
+            $settings['platform_name'] = trim((string) ($_POST['platform_name'] ?? 'Yojak'));
             $settings['allow_signup_globally'] = isset($_POST['allow_signup_globally']);
             $settings['demo_mode'] = isset($_POST['demo_mode']);
             $settings['updated_at'] = date('c');
             RegistryService::put('superadmin_settings', [$settings]);
         }
-        render('Settings', 'settings', compact('settings'), 'admin');
+        render('Settings', 'settings', compact('settings', 'csrfToken'), 'admin');
     }
 }
 
@@ -286,8 +330,10 @@ if (str_starts_with($path, '/app')) {
     ];
 
     if (isset($moduleRoutes[$path])) {
-        [$key, $label] = $moduleRoutes[$path];
-        modulePage($key, $label, 'Module not implemented yet. This is a placeholder shell.');
+        [$moduleKey, $label] = $moduleRoutes[$path];
+        $schemeKey = 'pm_surya_ghar';
+        requireModuleAccess($vendor, $schemeKey, $moduleKey);
+        render($label, 'module', ['vendor' => $vendor, 'moduleKey' => $moduleKey, 'schemeKey' => $schemeKey, 'title' => $label, 'description' => 'Module not implemented yet. This is a placeholder shell.'], 'vendor');
     }
 }
 

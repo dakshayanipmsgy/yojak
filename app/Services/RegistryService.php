@@ -117,6 +117,43 @@ class RegistryService
     public static function getVendorById(string $vendorId): ?array { return self::findBy(self::get('vendors'), 'vendor_id', $vendorId); }
     public static function getVendorByEmail(string $email): ?array { return self::findBy(self::get('vendors'), 'email', strtolower($email)); }
     public static function getPendingSignupById(string $signupId): ?array { return self::findBy(self::get('pending_signups'), 'signup_id', $signupId); }
+
+    public static function getVendorByMobile(string $mobile): ?array
+    {
+        $normalized = preg_replace('/\D+/', '', $mobile) ?? '';
+        foreach (self::get('vendors') as $vendor) {
+            $rowMobile = preg_replace('/\D+/', '', (string) ($vendor['mobile'] ?? '')) ?? '';
+            if ($rowMobile !== '' && $rowMobile === $normalized) {
+                return $vendor;
+            }
+        }
+        return null;
+    }
+
+    public static function getPendingSignupByEmailOrMobile(string $identifier): ?array
+    {
+        $email = strtolower(trim($identifier));
+        $mobile = preg_replace('/\D+/', '', $identifier) ?? '';
+        foreach (self::get('pending_signups') as $row) {
+            $rowEmail = strtolower((string) ($row['email'] ?? ''));
+            $rowMobile = preg_replace('/\D+/', '', (string) ($row['mobile'] ?? '')) ?? '';
+            if (($email !== '' && $rowEmail === $email) || ($mobile !== '' && $rowMobile !== '' && $rowMobile === $mobile)) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    public static function getSubscriptionForVendor(string $vendorId): ?array
+    {
+        $subs = array_values(array_filter(self::get('subscriptions'), fn(array $s): bool => ($s['vendor_id'] ?? '') === $vendorId));
+        if ($subs === []) {
+            return null;
+        }
+
+        usort($subs, fn(array $a, array $b): int => strcmp((string) ($b['updated_at'] ?? ''), (string) ($a['updated_at'] ?? '')));
+        return $subs[0];
+    }
     public static function getActiveSubscriptionForVendor(string $vendorId): ?array
     {
         $subs = array_filter(self::get('subscriptions'), fn(array $s): bool => ($s['vendor_id'] ?? '') === $vendorId && in_array($s['subscription_status'] ?? '', ['trial', 'active'], true));

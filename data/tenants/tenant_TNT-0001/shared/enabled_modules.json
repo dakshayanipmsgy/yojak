@@ -1,25 +1,25 @@
 {
     "data": {
         "keys": [
-            "leads",
-            "customers",
-            "quotations",
-            "messaging-templates",
-            "templates-media",
-            "solar-finance",
             "agreements",
-            "payment-receipts",
+            "company-branding",
+            "customers",
+            "dashboard",
             "explainer-content",
+            "leads",
+            "messaging-templates",
+            "payment-receipts",
+            "quotations",
             "rate-chart",
             "reports-exports",
             "scheme-settings",
-            "dashboard",
-            "company-branding",
-            "subscription-billing"
+            "solar-finance",
+            "subscription-billing",
+            "templates-media"
         ]
     },
     "meta": {
         "version": 1,
-        "updated_at": ""
+        "updated_at": "2026-03-29T22:31:18+00:00"
     }
 }

@@ -16,6 +16,7 @@ class BootstrapService
         foreach (RegistryService::get('vendors') as $vendor) {
             self::repairTenantStorage((string) $vendor['tenant_id']);
         }
+        SubscriptionService::normalizeAll();
     }
 
     public static function bootstrapPlatformStorage(): void

@@ -1,33 +1,52 @@
 {
     "data": {
-        "plan": "growth",
-        "modules": [
-            "leads",
-            "customers",
-            "quotations",
-            "messaging-templates",
-            "templates-media",
-            "solar-finance",
+        "current_plan": "Growth Package",
+        "current_plan_key": "growth",
+        "mode": "plan",
+        "cycle": "monthly",
+        "status": "trial",
+        "trial_dates": {
+            "start": "2026-03-29T22:31:06+00:00",
+            "end": "2026-04-12T22:31:06+00:00"
+        },
+        "active_dates": {
+            "from": null,
+            "until": null
+        },
+        "renewal_date": "2026-04-12T22:31:06+00:00",
+        "entitled_modules": [
             "agreements",
-            "payment-receipts",
+            "company-branding",
+            "customers",
+            "dashboard",
             "explainer-content",
+            "leads",
+            "messaging-templates",
+            "payment-receipts",
+            "quotations",
             "rate-chart",
             "reports-exports",
             "scheme-settings",
-            "dashboard",
-            "company-branding",
-            "subscription-billing"
+            "solar-finance",
+            "subscription-billing",
+            "templates-media"
         ],
-        "cycle": "monthly",
-        "trial_dates": {
-            "start": "2026-03-29",
-            "end": "2026-03-29"
+        "price_breakdown": {
+            "mode": "plan",
+            "plan_key": "growth",
+            "plan_price": 3000,
+            "addon_module_prices": [],
+            "direct_module_prices": [],
+            "setup_fees": 0,
+            "recurring_total": 3000,
+            "currency": "INR",
+            "entitled_modules_count": 15,
+            "calculated_at": "2026-03-29T22:31:18+00:00"
         },
-        "subscription_status": "active",
-        "assigned_at": "2026-03-29T21:23:35+00:00"
+        "updated_at": "2026-03-29T22:31:18+00:00"
     },
     "meta": {
         "version": 1,
-        "updated_at": ""
+        "updated_at": "2026-03-29T22:31:18+00:00"
     }
 }

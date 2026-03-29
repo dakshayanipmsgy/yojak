@@ -1,7 +1,224 @@
 {
-    "items": [],
+    "items": [
+        {
+            "subscription_id": "SUB-0001",
+            "vendor_id": "VND-0001",
+            "tenant_id": "TNT-0001",
+            "scheme_key": "pm_surya_ghar",
+            "plan_key": "growth",
+            "billing_cycle": "monthly",
+            "subscription_status": "trial",
+            "started_at": "2026-03-29T22:31:06+00:00",
+            "trial_started_at": "2026-03-29T22:31:06+00:00",
+            "trial_ends_at": "2026-04-12T22:31:06+00:00",
+            "active_from": null,
+            "active_until": null,
+            "cancelled_at": null,
+            "override_pricing_json": [],
+            "entitled_modules": [
+                "agreements",
+                "company-branding",
+                "customers",
+                "dashboard",
+                "explainer-content",
+                "leads",
+                "messaging-templates",
+                "payment-receipts",
+                "quotations",
+                "rate-chart",
+                "reports-exports",
+                "scheme-settings",
+                "solar-finance",
+                "subscription-billing",
+                "templates-media"
+            ],
+            "source_type": "seed",
+            "source_ref": "SEED",
+            "created_at": "2026-03-29T22:31:06+00:00",
+            "updated_at": "2026-03-29T22:31:18+00:00",
+            "subscription_mode": "plan",
+            "addon_module_keys": [],
+            "direct_module_keys": [],
+            "removed_module_keys": [],
+            "trial_days_assigned": 0,
+            "renewal_date": "2026-04-12T22:31:06+00:00",
+            "override_modules_json": [],
+            "plan_snapshot": {
+                "plan_key": "growth",
+                "plan_name": "Growth Package",
+                "included_modules": [
+                    "leads",
+                    "customers",
+                    "quotations",
+                    "messaging-templates",
+                    "templates-media",
+                    "solar-finance",
+                    "agreements",
+                    "payment-receipts",
+                    "explainer-content",
+                    "rate-chart",
+                    "reports-exports",
+                    "scheme-settings"
+                ],
+                "monthly_price": 3000,
+                "quarterly_price": 8400,
+                "yearly_price": 33000,
+                "trial_days": 14,
+                "captured_at": "2026-03-29T22:31:06+00:00"
+            },
+            "module_snapshots": [
+                {
+                    "module_key": "agreements",
+                    "module_name": "Agreements",
+                    "monthly_price": 399,
+                    "quarterly_price": 1197,
+                    "yearly_price": 4788,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "company-branding",
+                    "module_name": "Company Profile & Branding",
+                    "monthly_price": 0,
+                    "quarterly_price": 0,
+                    "yearly_price": 0,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "customers",
+                    "module_name": "Customers",
+                    "monthly_price": 299,
+                    "quarterly_price": 897,
+                    "yearly_price": 3588,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "dashboard",
+                    "module_name": "Dashboard",
+                    "monthly_price": 0,
+                    "quarterly_price": 0,
+                    "yearly_price": 0,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "explainer-content",
+                    "module_name": "Explainer Content",
+                    "monthly_price": 199,
+                    "quarterly_price": 597,
+                    "yearly_price": 2388,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "leads",
+                    "module_name": "Leads",
+                    "monthly_price": 499,
+                    "quarterly_price": 1497,
+                    "yearly_price": 5988,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "messaging-templates",
+                    "module_name": "Messaging Templates",
+                    "monthly_price": 199,
+                    "quarterly_price": 597,
+                    "yearly_price": 2388,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "payment-receipts",
+                    "module_name": "Payment Receipts",
+                    "monthly_price": 299,
+                    "quarterly_price": 897,
+                    "yearly_price": 3588,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "quotations",
+                    "module_name": "Quotations",
+                    "monthly_price": 899,
+                    "quarterly_price": 2697,
+                    "yearly_price": 10788,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "rate-chart",
+                    "module_name": "Rate Chart",
+                    "monthly_price": 299,
+                    "quarterly_price": 897,
+                    "yearly_price": 3588,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "reports-exports",
+                    "module_name": "Reports & Exports",
+                    "monthly_price": 299,
+                    "quarterly_price": 897,
+                    "yearly_price": 3588,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "scheme-settings",
+                    "module_name": "Scheme Settings",
+                    "monthly_price": 199,
+                    "quarterly_price": 597,
+                    "yearly_price": 2388,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "solar-finance",
+                    "module_name": "Solar and Finance",
+                    "monthly_price": 1499,
+                    "quarterly_price": 4497,
+                    "yearly_price": 17988,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "subscription-billing",
+                    "module_name": "Subscription & Billing",
+                    "monthly_price": 0,
+                    "quarterly_price": 0,
+                    "yearly_price": 0,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                },
+                {
+                    "module_key": "templates-media",
+                    "module_name": "Templates & Media",
+                    "monthly_price": 399,
+                    "quarterly_price": 1197,
+                    "yearly_price": 4788,
+                    "setup_fee": 0,
+                    "captured_at": "2026-03-29T22:31:06+00:00"
+                }
+            ],
+            "price_breakdown": {
+                "mode": "plan",
+                "plan_key": "growth",
+                "plan_price": 3000,
+                "addon_module_prices": [],
+                "direct_module_prices": [],
+                "setup_fees": 0,
+                "recurring_total": 3000,
+                "currency": "INR",
+                "entitled_modules_count": 15,
+                "calculated_at": "2026-03-29T22:31:18+00:00"
+            }
+        }
+    ],
     "meta": {
         "version": 1,
-        "updated_at": ""
+        "updated_at": "2026-03-29T22:31:18+00:00"
     }
 }

@@ -1,0 +1,1 @@
+<h1>Admin Dashboard</h1><div class="grid grid-3"><?php foreach($counts as $k=>$v): ?><div class="card"><h3><?= htmlspecialchars((string)$v) ?></h3><p><?= htmlspecialchars(ucwords(str_replace('_',' ',$k))) ?></p></div><?php endforeach; ?></div>

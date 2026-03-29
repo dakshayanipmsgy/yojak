@@ -1,0 +1,325 @@
+[
+    {
+        "module_id": "MOD001",
+        "module_key": "dashboard",
+        "module_name": "Dashboard",
+        "module_scope": "core",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Dashboard module placeholder.",
+        "monthly_price": 0,
+        "quarterly_price": 0,
+        "yearly_price": 0,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": true
+    },
+    {
+        "module_id": "MOD002",
+        "module_key": "leads",
+        "module_name": "Leads",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Leads module placeholder.",
+        "monthly_price": 499,
+        "quarterly_price": 1497,
+        "yearly_price": 5988,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD003",
+        "module_key": "customers",
+        "module_name": "Customers",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Customers module placeholder.",
+        "monthly_price": 299,
+        "quarterly_price": 897,
+        "yearly_price": 3588,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD004",
+        "module_key": "quotations",
+        "module_name": "Quotations",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Quotations module placeholder.",
+        "monthly_price": 899,
+        "quarterly_price": 2697,
+        "yearly_price": 10788,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD005",
+        "module_key": "solar-finance",
+        "module_name": "Solar and Finance",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Solar and Finance module placeholder.",
+        "monthly_price": 1499,
+        "quarterly_price": 4497,
+        "yearly_price": 17988,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD006",
+        "module_key": "agreements",
+        "module_name": "Agreements",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Agreements module placeholder.",
+        "monthly_price": 399,
+        "quarterly_price": 1197,
+        "yearly_price": 4788,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD007",
+        "module_key": "payment-receipts",
+        "module_name": "Payment Receipts",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Payment Receipts module placeholder.",
+        "monthly_price": 299,
+        "quarterly_price": 897,
+        "yearly_price": 3588,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD008",
+        "module_key": "invoices",
+        "module_name": "Invoices",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Invoices module placeholder.",
+        "monthly_price": 499,
+        "quarterly_price": 1497,
+        "yearly_price": 5988,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD009",
+        "module_key": "complaints",
+        "module_name": "Complaints",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Complaints module placeholder.",
+        "monthly_price": 499,
+        "quarterly_price": 1497,
+        "yearly_price": 5988,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD010",
+        "module_key": "templates-media",
+        "module_name": "Templates & Media",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Templates & Media module placeholder.",
+        "monthly_price": 399,
+        "quarterly_price": 1197,
+        "yearly_price": 4788,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD011",
+        "module_key": "messaging-templates",
+        "module_name": "Messaging Templates",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Messaging Templates module placeholder.",
+        "monthly_price": 199,
+        "quarterly_price": 597,
+        "yearly_price": 2388,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD012",
+        "module_key": "explainer-content",
+        "module_name": "Explainer Content",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Explainer Content module placeholder.",
+        "monthly_price": 199,
+        "quarterly_price": 597,
+        "yearly_price": 2388,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD013",
+        "module_key": "rate-chart",
+        "module_name": "Rate Chart",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Rate Chart module placeholder.",
+        "monthly_price": 299,
+        "quarterly_price": 897,
+        "yearly_price": 3588,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD014",
+        "module_key": "reports-exports",
+        "module_name": "Reports & Exports",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Reports & Exports module placeholder.",
+        "monthly_price": 299,
+        "quarterly_price": 897,
+        "yearly_price": 3588,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    },
+    {
+        "module_id": "MOD015",
+        "module_key": "company-branding",
+        "module_name": "Company Profile & Branding",
+        "module_scope": "core",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Company Profile & Branding module placeholder.",
+        "monthly_price": 0,
+        "quarterly_price": 0,
+        "yearly_price": 0,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": true
+    },
+    {
+        "module_id": "MOD016",
+        "module_key": "subscription-billing",
+        "module_name": "Subscription & Billing",
+        "module_scope": "core",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Subscription & Billing module placeholder.",
+        "monthly_price": 0,
+        "quarterly_price": 0,
+        "yearly_price": 0,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": true
+    },
+    {
+        "module_id": "MOD017",
+        "module_key": "scheme-settings",
+        "module_name": "Scheme Settings",
+        "module_scope": "scheme-specific",
+        "scheme_keys": [
+            "pm-surya-ghar"
+        ],
+        "description": "Scheme Settings module placeholder.",
+        "monthly_price": 199,
+        "quarterly_price": 597,
+        "yearly_price": 2388,
+        "optional_setup_fee": 0,
+        "enabled_flag": true,
+        "dependency_list": [],
+        "visibility_rules": [],
+        "config_json": [],
+        "is_core_included": false
+    }
+]

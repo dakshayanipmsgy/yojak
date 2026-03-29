@@ -1,0 +1,81 @@
+[
+    {
+        "plan_id": "PLAN001",
+        "plan_key": "basic",
+        "plan_name": "Basic Package",
+        "scheme_key": "pm-surya-ghar",
+        "included_modules": [
+            "leads",
+            "customers",
+            "quotations",
+            "messaging-templates",
+            "templates-media"
+        ],
+        "monthly_price": 1000,
+        "quarterly_price": 2700,
+        "yearly_price": 10000,
+        "trial_days": 14,
+        "limits_json": [],
+        "recommended_flag": false,
+        "active_flag": true,
+        "description": "Starter bundle for new vendors."
+    },
+    {
+        "plan_id": "PLAN002",
+        "plan_key": "growth",
+        "plan_name": "Growth Package",
+        "scheme_key": "pm-surya-ghar",
+        "included_modules": [
+            "leads",
+            "customers",
+            "quotations",
+            "messaging-templates",
+            "templates-media",
+            "solar-finance",
+            "agreements",
+            "payment-receipts",
+            "explainer-content",
+            "rate-chart",
+            "reports-exports",
+            "scheme-settings"
+        ],
+        "monthly_price": 3000,
+        "quarterly_price": 8400,
+        "yearly_price": 33000,
+        "trial_days": 14,
+        "limits_json": [],
+        "recommended_flag": true,
+        "active_flag": true,
+        "description": "Most popular plan for growing vendors."
+    },
+    {
+        "plan_id": "PLAN003",
+        "plan_key": "pro",
+        "plan_name": "Pro Package",
+        "scheme_key": "pm-surya-ghar",
+        "included_modules": [
+            "leads",
+            "customers",
+            "quotations",
+            "messaging-templates",
+            "templates-media",
+            "solar-finance",
+            "agreements",
+            "payment-receipts",
+            "explainer-content",
+            "rate-chart",
+            "reports-exports",
+            "scheme-settings",
+            "invoices",
+            "complaints"
+        ],
+        "monthly_price": 5000,
+        "quarterly_price": 14000,
+        "yearly_price": 55000,
+        "trial_days": 14,
+        "limits_json": [],
+        "recommended_flag": false,
+        "active_flag": true,
+        "description": "Complete package with advanced modules."
+    }
+]

@@ -1,0 +1,1 @@
+<h1>Company Profile</h1><div class="card"><p><strong>Company:</strong> <?= htmlspecialchars($vendor['company_name']) ?></p><p><strong>Owner:</strong> <?= htmlspecialchars($vendor['owner_name']) ?></p><p><strong>Email:</strong> <?= htmlspecialchars($vendor['email']) ?></p><p><strong>City/State:</strong> <?= htmlspecialchars($vendor['city'].'/'.$vendor['state']) ?></p></div>

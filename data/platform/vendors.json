@@ -1,0 +1,39 @@
+[
+    {
+        "vendor_id": "VEN0001",
+        "tenant_id": "TEN0001",
+        "owner_name": "Demo Owner",
+        "company_name": "Demo Solar LLP",
+        "mobile": "9000000001",
+        "email": "vendor@demo.local",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "password_hash": "$2y$12$XDPblr3CeawkIMphdLiaLOWMXWlU3bvQD8ciLNvmqxAc6.pHR.LcW",
+        "verification_status": "verified",
+        "account_status": "active",
+        "subscription_status": "trial",
+        "plan_key": "growth",
+        "trial_end_date": "2026-04-12",
+        "enabled_schemes": [
+            "pm-surya-ghar"
+        ],
+        "enabled_modules": [
+            "leads",
+            "customers",
+            "quotations",
+            "messaging-templates",
+            "templates-media",
+            "solar-finance",
+            "agreements",
+            "payment-receipts",
+            "explainer-content",
+            "rate-chart",
+            "reports-exports",
+            "scheme-settings",
+            "dashboard",
+            "company-branding",
+            "subscription-billing"
+        ],
+        "created_at": "2026-03-29T20:59:36+00:00"
+    }
+]

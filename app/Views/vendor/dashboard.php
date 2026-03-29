@@ -1,0 +1,1 @@
+<h1>Vendor Dashboard</h1><div class="grid grid-3"><?php foreach($cards as $k=>$v): ?><div class="card"><h3><?= htmlspecialchars((string)$v) ?></h3><p><?= htmlspecialchars(ucwords(str_replace('_',' ',$k))) ?></p></div><?php endforeach; ?><div class="card"><h3><?= htmlspecialchars($vendor['subscription_status']) ?></h3><p>Subscription Status</p></div></div>

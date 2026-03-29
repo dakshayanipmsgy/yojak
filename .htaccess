@@ -1,0 +1,15 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Prevent rewrite loops when already targeting /public.
+    RewriteCond %{REQUEST_URI} !^/public/
+
+    # If the requested path exists inside /public, serve it from there.
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Otherwise route into canonical front controller.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^ public/index.php [L,QSA]
+</IfModule>

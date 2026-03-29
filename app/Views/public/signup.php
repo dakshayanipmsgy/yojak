@@ -1,4 +1,4 @@
-<h1>PM Surya Ghar Vendor Signup</h1>
+<h1><?= htmlspecialchars((string) ($scheme['public_title'] ?? 'Scheme')) ?> Vendor Signup</h1>
 <?php if (!empty($error)): ?><p class="msg err"><?= htmlspecialchars((string) $error) ?></p><?php endif; ?>
 <?php if (!empty($success)): ?><p class="msg ok"><?= htmlspecialchars((string) $success) ?></p><?php endif; ?>
 <?php
@@ -7,7 +7,7 @@ $signupAllowed = !empty($settings['allow_signup_globally']) && !empty($scheme['a
 <?php if (!$signupAllowed): ?>
     <p class="msg err">Signup is currently unavailable for this scheme.</p>
 <?php else: ?>
-<form method="post" class="card">
+<form method="post" class="card compact-form">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string) ($csrfToken ?? '')) ?>">
     <label>Owner Name*<input name="owner_name" required></label>
     <label>Company Name*<input name="company_name" required></label>

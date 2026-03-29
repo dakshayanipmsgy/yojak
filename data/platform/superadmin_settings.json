@@ -1,0 +1,7 @@
+{
+    "platform_name": "Yojak",
+    "allow_signup_globally": true,
+    "demo_mode": true,
+    "email": "admin@yojak.local",
+    "password_hash": "$2y$12$XeSaFnG3c/ZYRiLrvrV6n.DlmVoyjok7SZSM5.tvUC0z4KRN4R63G"
+}

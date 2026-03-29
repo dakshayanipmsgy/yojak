@@ -1,0 +1,2 @@
+<h1>Available Schemes</h1>
+<?php foreach($publicSchemes as $s): ?><div class="card"><h3><?= htmlspecialchars($s['public_title']) ?></h3><p><?= htmlspecialchars($s['description']) ?></p><p><span class="badge">Signup <?= !empty($s['signup_enabled']) ? 'Enabled' : 'Disabled' ?></span></p><a class="btn" href="/scheme/<?= htmlspecialchars($s['scheme_key']) ?>">Enter Portal</a></div><?php endforeach; ?>

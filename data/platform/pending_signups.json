@@ -1,0 +1,19 @@
+[
+    {
+        "signup_id": "SGN0001",
+        "scheme_key": "pm-surya-ghar",
+        "owner_name": "Pending Owner",
+        "company_name": "Pending Energy",
+        "mobile": "9000000002",
+        "email": "pending@demo.local",
+        "city": "Surat",
+        "state": "Gujarat",
+        "password_hash": "$2y$12$hoFZHowUPDCOd6rqSAqXEusRnHXydM9.EuULzriBfSWGNB0t1Ri2.",
+        "verification_status": "pending",
+        "account_status": "inactive",
+        "subscription_status": "none",
+        "requested_plan_key": "growth",
+        "status": "pending",
+        "submitted_at": "2026-03-29T20:59:37+00:00"
+    }
+]

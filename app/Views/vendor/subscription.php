@@ -1,0 +1,1 @@
+<h1>Subscription & Billing</h1><div class="card"><p><strong>Plan:</strong> <?= htmlspecialchars($vendor['plan_key']) ?></p><p><strong>Status:</strong> <?= htmlspecialchars($vendor['subscription_status']) ?></p><p><strong>Trial End:</strong> <?= htmlspecialchars($vendor['trial_end_date'] ?? '-') ?></p></div>

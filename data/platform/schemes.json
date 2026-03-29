@@ -1,0 +1,28 @@
+[
+    {
+        "scheme_id": "SCH001",
+        "scheme_key": "pm-surya-ghar",
+        "scheme_name": "PM Surya Ghar",
+        "public_title": "PM Surya Ghar Vendor Platform",
+        "description": "End-to-end vendor workspace for PM Surya Ghar workflows.",
+        "active_flag": true,
+        "signup_enabled": true,
+        "public_visible": true,
+        "public_landing_content": {
+            "overview": "Manage leads, quotations, agreements, billing and documents with a single workspace.",
+            "benefits": [
+                "Faster onboarding",
+                "Entitlement-based modules",
+                "Scheme-ready architecture"
+            ],
+            "workflow_summary": "Signup -> Approval -> Provisioning -> Operate"
+        },
+        "workflow_definition": "pm_surya_ghar_v1",
+        "module_registry": "pm_surya_ghar_v1",
+        "default_settings": [],
+        "default_templates": [],
+        "default_calculations": [],
+        "content_definition": [],
+        "document_definition": []
+    }
+]

@@ -1,0 +1,15 @@
+{
+    "data": {
+        "subsidy_assumptions": [],
+        "finance_assumptions": [],
+        "workflow_toggles": {
+            "enabled": true
+        },
+        "content_toggles": [],
+        "defaults": []
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

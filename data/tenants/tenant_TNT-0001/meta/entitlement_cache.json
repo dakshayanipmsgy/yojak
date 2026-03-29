@@ -1,0 +1,31 @@
+{
+    "data": {
+        "current_plan_key": "growth",
+        "enabled_scheme_keys": [
+            "pm_surya_ghar"
+        ],
+        "enabled_module_keys": [
+            "leads",
+            "customers",
+            "quotations",
+            "messaging-templates",
+            "templates-media",
+            "solar-finance",
+            "agreements",
+            "payment-receipts",
+            "explainer-content",
+            "rate-chart",
+            "reports-exports",
+            "scheme-settings",
+            "dashboard",
+            "company-branding",
+            "subscription-billing"
+        ],
+        "subscription_status": "active",
+        "updated_at": "2026-03-29T21:23:35+00:00"
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

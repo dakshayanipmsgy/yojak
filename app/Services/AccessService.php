@@ -18,11 +18,8 @@ class AccessService
 
     public static function isSubscriptionAllowed(array $vendor): bool
     {
-        $status = $vendor['subscription_status'] ?? 'none';
-        if ($status === 'trial' && !empty($vendor['trial_end_date']) && strtotime((string) $vendor['trial_end_date']) < time()) {
-            return false;
-        }
-        return in_array($status, ['trial', 'active'], true);
+        $sub = RegistryService::getActiveSubscriptionForVendor((string) ($vendor['vendor_id'] ?? ''));
+        return $sub !== null;
     }
 
     public static function hasSchemeAccess(array $vendor, string $schemeKey): bool

@@ -1,0 +1,25 @@
+{
+    "data": {
+        "stage_order": [
+            "lead",
+            "engagement",
+            "detailed_information_shared",
+            "solar_finance",
+            "quotation",
+            "quotation_accepted",
+            "agreement",
+            "payment_receipt",
+            "invoice",
+            "complaint_support"
+        ],
+        "allowed_transitions": {
+            "lead": [
+                "engagement"
+            ]
+        }
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

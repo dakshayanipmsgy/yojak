@@ -1,0 +1,35 @@
+{
+    "data": {
+        "template_sets": {
+            "standard_v1": {
+                "cover_notes": "Dear {{customer_name}}, thank you for your interest.",
+                "annexure_blocks": [
+                    "System scope",
+                    "Installation timeline"
+                ]
+            }
+        },
+        "cover_notes": [],
+        "annexure_blocks": [],
+        "subsidy_info": "Subsidy may vary by policy updates.",
+        "milestones": [
+            "Survey",
+            "Approval",
+            "Install"
+        ],
+        "next_steps": [
+            "Confirm quotation",
+            "Share documents"
+        ],
+        "payment_terms": "50% advance, 50% on completion",
+        "warranty": "As per OEM policy",
+        "transport": "Inclusive within city limits",
+        "terms_conditions": [
+            "Prices valid for 15 days"
+        ]
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

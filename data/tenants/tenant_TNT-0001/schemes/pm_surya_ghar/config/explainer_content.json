@@ -1,0 +1,32 @@
+{
+    "data": {
+        "page_title": "PM Surya Ghar Guide",
+        "hero_intro": "Understand subsidy-ready rooftop solar quickly.",
+        "scheme_explanation": "Government-backed rooftop adoption support.",
+        "eligibility": [
+            "Residential premises",
+            "Valid electricity bill"
+        ],
+        "on_grid_block": "On-grid systems reduce daytime bills.",
+        "hybrid_block": "Hybrid includes battery backup.",
+        "faqs": [
+            {
+                "q": "How long does installation take?",
+                "a": "Usually 2-4 weeks."
+            }
+        ],
+        "benefits": [
+            "Bill savings",
+            "Clean energy"
+        ],
+        "expectations": [
+            "Site survey required"
+        ],
+        "cta": "Contact us to start.",
+        "media_urls": []
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

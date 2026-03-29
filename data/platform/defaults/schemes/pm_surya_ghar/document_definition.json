@@ -1,0 +1,25 @@
+{
+    "data": {
+        "naming_patterns": {
+            "quotation": "quotation_{quotation_id}_v1.html"
+        },
+        "default_paper_size": "A4",
+        "printable_sections": [
+            "cover",
+            "pricing",
+            "terms"
+        ],
+        "snapshot_requirements": [
+            "branding",
+            "rate_chart",
+            "calculation_inputs"
+        ],
+        "required_branding_rules": {
+            "logo_optional": true
+        }
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

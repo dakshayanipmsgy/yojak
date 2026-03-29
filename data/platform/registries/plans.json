@@ -1,0 +1,109 @@
+{
+    "items": [
+        {
+            "plan_id": "PLN-0001",
+            "plan_key": "basic",
+            "plan_name": "Basic Package",
+            "scheme_key": "pm_surya_ghar",
+            "included_modules": [
+                "leads",
+                "customers",
+                "quotations",
+                "messaging-templates",
+                "templates-media"
+            ],
+            "excluded_modules": [
+                "solar-finance",
+                "invoices",
+                "complaints"
+            ],
+            "monthly_price": 1000,
+            "quarterly_price": 2700,
+            "yearly_price": 10000,
+            "trial_days": 14,
+            "limits_json": {
+                "max_leads": 100
+            },
+            "recommended_flag": false,
+            "active_flag": true,
+            "description": "Starter bundle for new vendors.",
+            "created_at": "2026-03-29T21:22:36+00:00",
+            "updated_at": "2026-03-29T21:22:36+00:00"
+        },
+        {
+            "plan_id": "PLN-0002",
+            "plan_key": "growth",
+            "plan_name": "Growth Package",
+            "scheme_key": "pm_surya_ghar",
+            "included_modules": [
+                "leads",
+                "customers",
+                "quotations",
+                "messaging-templates",
+                "templates-media",
+                "solar-finance",
+                "agreements",
+                "payment-receipts",
+                "explainer-content",
+                "rate-chart",
+                "reports-exports",
+                "scheme-settings"
+            ],
+            "excluded_modules": [
+                "invoices",
+                "complaints"
+            ],
+            "monthly_price": 3000,
+            "quarterly_price": 8400,
+            "yearly_price": 33000,
+            "trial_days": 14,
+            "limits_json": {
+                "max_leads": 500
+            },
+            "recommended_flag": true,
+            "active_flag": true,
+            "description": "Most popular plan for growing vendors.",
+            "created_at": "2026-03-29T21:22:36+00:00",
+            "updated_at": "2026-03-29T21:22:36+00:00"
+        },
+        {
+            "plan_id": "PLN-0003",
+            "plan_key": "pro",
+            "plan_name": "Pro Package",
+            "scheme_key": "pm_surya_ghar",
+            "included_modules": [
+                "leads",
+                "customers",
+                "quotations",
+                "messaging-templates",
+                "templates-media",
+                "solar-finance",
+                "agreements",
+                "payment-receipts",
+                "explainer-content",
+                "rate-chart",
+                "reports-exports",
+                "scheme-settings",
+                "invoices",
+                "complaints"
+            ],
+            "excluded_modules": [],
+            "monthly_price": 5000,
+            "quarterly_price": 14000,
+            "yearly_price": 55000,
+            "trial_days": 14,
+            "limits_json": {
+                "max_leads": 2500
+            },
+            "recommended_flag": false,
+            "active_flag": true,
+            "description": "Complete package with advanced modules.",
+            "created_at": "2026-03-29T21:22:36+00:00",
+            "updated_at": "2026-03-29T21:22:36+00:00"
+        }
+    ],
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

@@ -1,0 +1,46 @@
+{
+    "items": [
+        {
+            "vendor_id": "VND-0001",
+            "tenant_id": "TNT-0001",
+            "owner_name": "Demo Owner",
+            "company_name": "Demo Solar LLP",
+            "mobile": "9000000001",
+            "email": "vendor@demo.local",
+            "city": "Ahmedabad",
+            "state": "Gujarat",
+            "password_hash": "$2y$12$xyCGp5XbQE0XLGlDqcVsEOqJr/EZSh6TKcxH3N3290gTIiRRhHdRi",
+            "verification_status": "verified",
+            "account_status": "active",
+            "created_from_signup_id": "seed",
+            "default_scheme_key": "pm_surya_ghar",
+            "current_plan_key": "growth",
+            "enabled_schemes": [
+                "pm_surya_ghar"
+            ],
+            "enabled_modules": [
+                "leads",
+                "customers",
+                "quotations",
+                "messaging-templates",
+                "templates-media",
+                "solar-finance",
+                "agreements",
+                "payment-receipts",
+                "explainer-content",
+                "rate-chart",
+                "reports-exports",
+                "scheme-settings",
+                "dashboard",
+                "company-branding",
+                "subscription-billing"
+            ],
+            "created_at": "2026-03-29T21:22:36+00:00",
+            "updated_at": "2026-03-29T21:22:36+00:00"
+        }
+    ],
+    "meta": {
+        "version": 1,
+        "updated_at": "2026-03-29T21:22:36+00:00"
+    }
+}

@@ -1,0 +1,75 @@
+{
+    "data": {
+        "stages": [
+            {
+                "key": "lead",
+                "label": "Lead",
+                "order": 1,
+                "description": "Initial lead intake."
+            },
+            {
+                "key": "engagement",
+                "label": "Engagement",
+                "order": 2,
+                "description": "Initial contact and qualification."
+            },
+            {
+                "key": "detailed_information_shared",
+                "label": "Detailed Information Shared",
+                "order": 3,
+                "description": "Brochure and details provided."
+            },
+            {
+                "key": "solar_finance",
+                "label": "Solar Finance",
+                "order": 4,
+                "description": "Finance assumptions aligned."
+            },
+            {
+                "key": "quotation",
+                "label": "Quotation",
+                "order": 5,
+                "description": "Proposal prepared."
+            },
+            {
+                "key": "quotation_accepted",
+                "label": "Quotation Accepted",
+                "order": 6,
+                "description": "Customer accepted proposal."
+            },
+            {
+                "key": "agreement",
+                "label": "Agreement",
+                "order": 7,
+                "description": "Agreement finalized."
+            },
+            {
+                "key": "payment_receipt",
+                "label": "Payment Receipt",
+                "order": 8,
+                "description": "Payment acknowledged."
+            },
+            {
+                "key": "invoice",
+                "label": "Invoice",
+                "order": 9,
+                "description": "Invoice issued."
+            },
+            {
+                "key": "complaint_support",
+                "label": "Complaint Support",
+                "order": 10,
+                "description": "After-sales support."
+            }
+        ],
+        "allowed_transitions": {
+            "lead": [
+                "engagement"
+            ]
+        }
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "data": {
+        "company_name": "",
+        "logo_path": "",
+        "email": "",
+        "phone": "",
+        "address": "",
+        "gst": "",
+        "bank_details": {
+            "account_name": "",
+            "account_number": "",
+            "ifsc": ""
+        },
+        "footer_text": "Thank you for choosing us.",
+        "primary_color": "#0b5fff",
+        "document_branding_enabled": true
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

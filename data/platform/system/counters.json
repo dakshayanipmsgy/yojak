@@ -1,0 +1,25 @@
+{
+    "counters": {
+        "scheme": 1,
+        "module": 17,
+        "plan": 3,
+        "vendor": 1,
+        "tenant": 1,
+        "signup": 1,
+        "subscription": 1,
+        "admin": 1,
+        "lead": 0,
+        "customer": 0,
+        "quotation": 0,
+        "agreement": 0,
+        "receipt": 0,
+        "invoice": 0,
+        "complaint": 0,
+        "report": 0,
+        "audit_entry": 0
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

@@ -1,0 +1,17 @@
+{
+    "data": {
+        "tenant_id": "TNT-0001",
+        "vendor_id": "VND-0001",
+        "company_name": "Demo Solar LLP",
+        "default_scheme_key": "pm_surya_ghar",
+        "tenant_status": "active",
+        "provisioned_at": "2026-03-29T21:23:35+00:00",
+        "last_repaired_at": "2026-03-29T21:23:35+00:00",
+        "schema_version": 1,
+        "storage_version": 2
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

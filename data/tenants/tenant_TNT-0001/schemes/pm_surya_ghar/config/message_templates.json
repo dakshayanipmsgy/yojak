@@ -1,0 +1,19 @@
+{
+    "data": {
+        "whatsapp_intro": "Hello {{customer_name}}, this is {{vendor_name}}.",
+        "email_intro_subject": "Welcome from {{vendor_name}}",
+        "email_intro_body": "Please review your details at {{quotation_link}}.",
+        "whatsapp_details": "Your PM Surya Ghar details are ready.",
+        "email_details_subject": "Your quotation details",
+        "email_details_body": "Dear {{customer_name}}, your quotation is ready at {{quotation_link}}.",
+        "placeholders": [
+            "{{customer_name}}",
+            "{{vendor_name}}",
+            "{{quotation_link}}"
+        ]
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

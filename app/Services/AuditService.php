@@ -4,19 +4,29 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Core\JsonStorage;
-
 class AuditService
 {
-    public static function log(string $action, array $context = []): void
-    {
-        $file = DATA_PATH . '/platform/audit_log.json';
-        $items = JsonStorage::read($file, []);
-        $items[] = [
-            'timestamp' => date('c'),
-            'action' => $action,
-            'context' => $context,
+    public static function log(
+        string $eventType,
+        string $actorType = 'system',
+        ?string $actorId = null,
+        ?string $targetType = null,
+        ?string $targetId = null,
+        string $summary = '',
+        array $payload = []
+    ): void {
+        $entry = [
+            'audit_id' => CounterService::next('audit_entry'),
+            'event_type' => $eventType,
+            'actor_type' => $actorType,
+            'actor_id' => $actorId,
+            'target_type' => $targetType,
+            'target_id' => $targetId,
+            'summary' => $summary,
+            'payload' => $payload,
+            'created_at' => date('c'),
         ];
-        JsonStorage::write($file, $items);
+
+        RegistryService::appendSystemLog('audit_log', $entry);
     }
 }

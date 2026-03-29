@@ -1,0 +1,13 @@
+{
+    "data": {
+        "enabled": true,
+        "default_currency": "INR",
+        "regional_assumptions": {
+            "state": "Gujarat"
+        }
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

@@ -23,18 +23,41 @@ class JsonStorage
 
     public static function read(string $path, mixed $default = []): mixed
     {
-        self::ensureFile($path, $default);
-        $content = (string) file_get_contents($path);
+        if (!file_exists($path)) {
+            self::ensureFile($path, $default);
+        }
+
+        $content = (string) @file_get_contents($path);
         if (trim($content) === '') {
             return $default;
         }
+
         $decoded = json_decode($content, true);
-        return json_last_error() === JSON_ERROR_NONE ? $decoded : $default;
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+            return $default;
+        }
+
+        return $decoded;
     }
 
     public static function write(string $path, mixed $data): void
     {
         self::ensureDir(dirname($path));
-        file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        $tmp = $path . '.tmp';
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            return;
+        }
+
+        file_put_contents($tmp, $json, LOCK_EX);
+        rename($tmp, $path);
+    }
+
+    public static function touchMeta(array $payload): array
+    {
+        $payload['meta'] = $payload['meta'] ?? [];
+        $payload['meta']['version'] = $payload['meta']['version'] ?? 1;
+        $payload['meta']['updated_at'] = date('c');
+        return $payload;
     }
 }

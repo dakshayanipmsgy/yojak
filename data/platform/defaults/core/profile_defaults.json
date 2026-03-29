@@ -1,0 +1,19 @@
+{
+    "data": {
+        "owner_name": "",
+        "company_name": "",
+        "phone": "",
+        "email": "",
+        "address": "",
+        "city": "",
+        "state": "",
+        "pincode": "",
+        "gst_number": "",
+        "website": "",
+        "business_details": ""
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

@@ -1,0 +1,33 @@
+{
+    "data": {
+        "plan": "growth",
+        "modules": [
+            "leads",
+            "customers",
+            "quotations",
+            "messaging-templates",
+            "templates-media",
+            "solar-finance",
+            "agreements",
+            "payment-receipts",
+            "explainer-content",
+            "rate-chart",
+            "reports-exports",
+            "scheme-settings",
+            "dashboard",
+            "company-branding",
+            "subscription-billing"
+        ],
+        "cycle": "monthly",
+        "trial_dates": {
+            "start": "2026-03-29",
+            "end": "2026-03-29"
+        },
+        "subscription_status": "active",
+        "assigned_at": "2026-03-29T21:23:35+00:00"
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

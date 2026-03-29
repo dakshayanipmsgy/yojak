@@ -1,0 +1,19 @@
+{
+    "data": {
+        "owner_name": "Demo Owner",
+        "company_name": "Demo Solar LLP",
+        "phone": "9000000001",
+        "email": "vendor@demo.local",
+        "address": "",
+        "city": "Ahmedabad",
+        "state": "Gujarat",
+        "pincode": "",
+        "gst_number": "",
+        "website": "",
+        "business_details": ""
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

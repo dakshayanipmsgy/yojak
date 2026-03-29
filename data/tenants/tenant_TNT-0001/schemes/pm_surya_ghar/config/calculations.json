@@ -1,0 +1,23 @@
+{
+    "data": {
+        "subsidy_assumptions": {
+            "max_subsidy": 78000
+        },
+        "finance_assumptions": {
+            "interest_rate": 11.5
+        },
+        "rate_assumptions": {
+            "inflation": 3.5
+        },
+        "payback_assumptions": {
+            "years": 5
+        },
+        "default_graphs_config": {
+            "show_savings_curve": true
+        }
+    },
+    "meta": {
+        "version": 1,
+        "updated_at": ""
+    }
+}

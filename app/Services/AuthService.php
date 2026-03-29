@@ -16,43 +16,37 @@ class AuthService
         if (empty($_SESSION['vendor_id'])) {
             return null;
         }
-        $vendors = RegistryService::get('vendors', []);
-        foreach ($vendors as $vendor) {
-            if ($vendor['vendor_id'] === $_SESSION['vendor_id']) {
-                return $vendor;
-            }
-        }
-        return null;
+        return RegistryService::getVendorById((string) $_SESSION['vendor_id']);
     }
 
     public static function loginAdmin(string $email, string $password): bool
     {
-        $settings = RegistryService::get('superadmin_settings', []);
-        if (($settings['email'] ?? '') === $email && password_verify($password, $settings['password_hash'] ?? '')) {
-            $_SESSION['admin'] = ['email' => $email, 'logged_in_at' => date('c')];
-            AuditService::log('admin_login_success', ['email' => $email]);
-            return true;
+        $admins = RegistryService::get('superadmin_accounts');
+        foreach ($admins as $admin) {
+            if (($admin['email'] ?? '') === $email && !empty($admin['active_flag']) && password_verify($password, $admin['password_hash'] ?? '')) {
+                $_SESSION['admin'] = ['admin_id' => $admin['admin_id'], 'email' => $email, 'logged_in_at' => date('c')];
+                AuditService::log('admin_login_success', 'admin', $admin['admin_id'], 'admin', $admin['admin_id'], 'Admin login success.');
+                return true;
+            }
         }
         return false;
     }
 
     public static function loginVendor(string $email, string $password): array
     {
-        $vendors = RegistryService::get('vendors', []);
-        foreach ($vendors as $vendor) {
+        foreach (RegistryService::get('vendors') as $vendor) {
             if (($vendor['email'] ?? '') === $email && password_verify($password, $vendor['password_hash'] ?? '')) {
                 if (!AccessService::canAccessVendorWorkspace($vendor)) {
-                    AuditService::log('vendor_login_blocked', ['vendor_id' => $vendor['vendor_id'], 'status' => $vendor['subscription_status']]);
+                    AuditService::log('vendor_login_blocked', 'vendor', $vendor['vendor_id'], 'vendor', $vendor['vendor_id'], 'Vendor login blocked.');
                     return [false, 'Account is not eligible for workspace access.'];
                 }
                 $_SESSION['vendor_id'] = $vendor['vendor_id'];
-                AuditService::log('vendor_login_success', ['vendor_id' => $vendor['vendor_id']]);
+                AuditService::log('vendor_login_success', 'vendor', $vendor['vendor_id'], 'vendor', $vendor['vendor_id'], 'Vendor login success.');
                 return [true, ''];
             }
         }
 
-        $pending = RegistryService::get('pending_signups', []);
-        foreach ($pending as $entry) {
+        foreach (RegistryService::get('pending_signups') as $entry) {
             if (($entry['email'] ?? '') === $email) {
                 return [false, 'Signup exists but is pending/rejected review.'];
             }

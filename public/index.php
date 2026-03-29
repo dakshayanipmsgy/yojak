@@ -6,6 +6,7 @@ require __DIR__ . '/../app/bootstrap.php';
 
 use App\Services\AccessService;
 use App\Services\AuditService;
+use App\Services\CounterService;
 use App\Services\AuthService;
 use App\Services\ProvisioningService;
 use App\Services\RegistryService;
@@ -50,7 +51,7 @@ function requireVendor(): array
 function modulePage(string $moduleKey, string $title, string $description): void
 {
     $vendor = requireVendor();
-    $schemeKey = 'pm-surya-ghar';
+    $schemeKey = 'pm_surya_ghar';
     if (!AccessService::hasSchemeAccess($vendor, $schemeKey) || !AccessService::hasModuleAccess($vendor, $moduleKey)) {
         http_response_code(403);
         render('Access denied', 'module', compact('vendor', 'moduleKey', 'schemeKey', 'title', 'description'), 'vendor');
@@ -58,10 +59,11 @@ function modulePage(string $moduleKey, string $title, string $description): void
     render($title, 'module', compact('vendor', 'moduleKey', 'schemeKey', 'title', 'description'), 'vendor');
 }
 
-$schemes = RegistryService::get('schemes', []);
-$modules = RegistryService::get('modules', []);
-$plans = RegistryService::get('plans', []);
-$settings = RegistryService::get('superadmin_settings', []);
+$schemes = RegistryService::get('schemes');
+$modules = RegistryService::get('modules');
+$plans = RegistryService::get('plans');
+$settingsRow = RegistryService::get('superadmin_settings');
+$settings = $settingsRow[0] ?? [];
 
 if ($path === '/logout') {
     AuthService::logoutAll();
@@ -77,7 +79,7 @@ if ($path === '/schemes') {
     render('Schemes', 'schemes', compact('publicSchemes'));
 }
 if ($path === '/scheme/pm-surya-ghar') {
-    $scheme = RegistryService::findBy($schemes, 'scheme_key', 'pm-surya-ghar');
+    $scheme = RegistryService::getSchemeByKey('pm_surya_ghar');
     render('PM Surya Ghar', 'scheme', compact('scheme', 'plans'));
 }
 if ($path === '/pricing') {
@@ -96,8 +98,8 @@ if ($path === '/signup/pm-surya-ghar' && $method === 'POST') {
             render('Vendor Signup', 'signup', ['error' => 'Please fill all required fields.']);
         }
     }
-    $pending = RegistryService::get('pending_signups', []);
-    $vendors = RegistryService::get('vendors', []);
+    $pending = RegistryService::get('pending_signups');
+    $vendors = RegistryService::get('vendors');
     $email = strtolower(trim($_POST['email']));
     $mobile = trim($_POST['mobile']);
 
@@ -108,8 +110,8 @@ if ($path === '/signup/pm-surya-ghar' && $method === 'POST') {
     }
 
     $signup = [
-        'signup_id' => RegistryService::nextId('signup', 'SGN'),
-        'scheme_key' => 'pm-surya-ghar',
+        'signup_id' => CounterService::next('signup'),
+        'requested_scheme_key' => 'pm_surya_ghar',
         'owner_name' => htmlspecialchars(trim($_POST['owner_name'])),
         'company_name' => htmlspecialchars(trim($_POST['company_name'])),
         'mobile' => htmlspecialchars($mobile),
@@ -131,7 +133,7 @@ if ($path === '/signup/pm-surya-ghar' && $method === 'POST') {
     ];
     $pending[] = $signup;
     RegistryService::put('pending_signups', $pending);
-    AuditService::log('signup_submitted', ['signup_id' => $signup['signup_id'], 'email' => $signup['email']]);
+    AuditService::log('signup_submitted', 'vendor', null, 'signup', $signup['signup_id'], 'Signup submitted.', ['email' => $signup['email']]);
     render('Vendor Signup', 'signup', ['success' => 'Signup received. Waiting for superadmin verification.']);
 }
 if ($path === '/login' && $method === 'GET') {
@@ -156,8 +158,8 @@ if ($path === '/admin/login' && $method === 'POST') {
 
 if (str_starts_with($path, '/admin')) {
     requireAdmin();
-    $vendors = RegistryService::get('vendors', []);
-    $pending = RegistryService::get('pending_signups', []);
+    $vendors = RegistryService::get('vendors');
+    $pending = RegistryService::get('pending_signups');
 
     if ($path === '/admin' || $path === '/admin/dashboard') {
         $counts = [
@@ -180,37 +182,23 @@ if (str_starts_with($path, '/admin')) {
                     if ($_POST['action'] === 'reject') {
                         $row['status'] = 'rejected';
                         $row['verification_status'] = 'rejected';
-                        AuditService::log('vendor_rejected', ['signup_id' => $row['signup_id']]);
+                        $row['processed_at'] = date('c');
+                        $row['processed_by'] = AuthService::admin()['admin_id'] ?? 'ADM-0001';
+                        $row['process_note'] = 'Rejected by admin';
+                        AuditService::log('signup_rejected', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'signup', $row['signup_id'], 'Signup rejected.');
                     }
                     if ($_POST['action'] === 'verify') {
                         $plan = RegistryService::findBy($plans, 'plan_key', 'growth') ?? $plans[0];
-                        $vendor = [
-                            'vendor_id' => RegistryService::nextId('vendor', 'VEN'),
-                            'tenant_id' => RegistryService::nextId('tenant', 'TEN'),
-                            'owner_name' => $row['owner_name'],
-                            'company_name' => $row['company_name'],
-                            'mobile' => $row['mobile'],
-                            'email' => $row['email'],
-                            'city' => $row['city'],
-                            'state' => $row['state'],
-                            'password_hash' => $row['password_hash'],
-                            'verification_status' => 'verified',
-                            'account_status' => 'active',
-                            'subscription_status' => 'trial',
-                            'plan_key' => $plan['plan_key'],
-                            'trial_end_date' => date('Y-m-d', strtotime('+' . (int)($plan['trial_days'] ?? 14) . ' days')),
-                            'enabled_schemes' => ['pm-surya-ghar'],
-                            'enabled_modules' => array_values(array_unique(array_merge($plan['included_modules'], ['dashboard', 'company-branding', 'subscription-billing']))),
-                            'created_at' => date('c'),
-                        ];
-                        $vendors[] = $vendor;
-                        RegistryService::put('vendors', $vendors);
-                        ProvisioningService::provisionTenant($vendor, $plan, $schemes[0]);
-                        $subs = RegistryService::get('subscriptions', []);
-                        $subs[] = ['vendor_id' => $vendor['vendor_id'], 'tenant_id' => $vendor['tenant_id'], 'plan_key' => $plan['plan_key'], 'status' => 'trial', 'trial_end_date' => $vendor['trial_end_date']];
-                        RegistryService::put('subscriptions', $subs);
+                        $vendor = ProvisioningService::provisionTenantForApprovedSignup(
+                            $row,
+                            ['pm_surya_ghar'],
+                            $plan['plan_key'],
+                            'monthly',
+                            (int) ($plan['trial_days'] ?? 14),
+                            AuthService::admin()['admin_id'] ?? 'ADM-0001'
+                        );
                         $row['status'] = 'verified';
-                        AuditService::log('vendor_verified', ['signup_id' => $row['signup_id'], 'vendor_id' => $vendor['vendor_id']]);
+                        AuditService::log('signup_verified', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $vendor['vendor_id'], 'Signup verified and provisioned.', ['signup_id' => $row['signup_id']]);
                     }
                 }
             }
@@ -227,15 +215,15 @@ if (str_starts_with($path, '/admin')) {
                 if ($v['vendor_id'] === $_POST['vendor_id']) {
                     if ($_POST['action'] === 'suspend') {
                         $v['account_status'] = 'suspended';
-                        AuditService::log('vendor_suspended', ['vendor_id' => $v['vendor_id']]);
+                        AuditService::log('vendor_suspended', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $v['vendor_id'], 'Vendor suspended.');
                     }
                     if ($_POST['action'] === 'activate') {
                         $v['account_status'] = 'active';
-                        AuditService::log('vendor_activated', ['vendor_id' => $v['vendor_id']]);
+                        AuditService::log('vendor_activated', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $v['vendor_id'], 'Vendor activated.');
                     }
                     if ($_POST['action'] === 'cancel') {
                         $v['account_status'] = 'cancelled';
-                        $v['subscription_status'] = 'cancelled';
+                        AuditService::log('vendor_cancelled', 'admin', AuthService::admin()['admin_id'] ?? 'ADM-0001', 'vendor', $v['vendor_id'], 'Vendor cancelled.');
                     }
                 }
             }
@@ -254,7 +242,8 @@ if (str_starts_with($path, '/admin')) {
             $settings['platform_name'] = trim($_POST['platform_name'] ?? 'Yojak');
             $settings['allow_signup_globally'] = isset($_POST['allow_signup_globally']);
             $settings['demo_mode'] = isset($_POST['demo_mode']);
-            RegistryService::put('superadmin_settings', $settings);
+            $settings['updated_at'] = date('c');
+            RegistryService::put('superadmin_settings', [$settings]);
         }
         render('Settings', 'settings', compact('settings'), 'admin');
     }
@@ -264,12 +253,12 @@ if (str_starts_with($path, '/app')) {
     $vendor = requireVendor();
 
     if ($path === '/app' || $path === '/app/dashboard') {
-        $schemePath = DATA_PATH . '/tenants/tenant_' . $vendor['tenant_id'] . '/pm-surya-ghar';
+        $schemePath = DATA_PATH . '/tenants/tenant_' . $vendor['tenant_id'] . '/schemes/pm_surya_ghar/records';
         $cards = [
-            'lead_count' => count((array) \App\Core\JsonStorage::read($schemePath . '/leads.json', [])),
-            'draft_quotations' => count((array) \App\Core\JsonStorage::read($schemePath . '/quotations.json', [])),
-            'pending_agreements' => count((array) \App\Core\JsonStorage::read($schemePath . '/agreements.json', [])),
-            'open_complaints' => count((array) \App\Core\JsonStorage::read($schemePath . '/complaints.json', [])),
+            'lead_count' => count((array) (\App\Core\JsonStorage::read($schemePath . '/leads.json', ['items' => []])['items'] ?? [])),
+            'draft_quotations' => count((array) (\App\Core\JsonStorage::read($schemePath . '/quotations.json', ['items' => []])['items'] ?? [])),
+            'pending_agreements' => count((array) (\App\Core\JsonStorage::read($schemePath . '/agreements.json', ['items' => []])['items'] ?? [])),
+            'open_complaints' => count((array) (\App\Core\JsonStorage::read($schemePath . '/complaints.json', ['items' => []])['items'] ?? [])),
         ];
         render('Vendor Dashboard', 'dashboard', compact('vendor', 'cards'), 'vendor');
     }

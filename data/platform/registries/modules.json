@@ -21,7 +21,7 @@
             "nav_label": "Dashboard",
             "nav_order": 1,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0002",
@@ -44,7 +44,7 @@
             "nav_label": "Leads",
             "nav_order": 2,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0003",
@@ -67,7 +67,7 @@
             "nav_label": "Customers",
             "nav_order": 3,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0004",
@@ -90,7 +90,7 @@
             "nav_label": "Quotations",
             "nav_order": 4,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0005",
@@ -113,7 +113,7 @@
             "nav_label": "Solar and Finance",
             "nav_order": 5,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0006",
@@ -136,7 +136,7 @@
             "nav_label": "Agreements",
             "nav_order": 6,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0007",
@@ -159,7 +159,7 @@
             "nav_label": "Payment Receipts",
             "nav_order": 7,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0008",
@@ -182,7 +182,7 @@
             "nav_label": "Invoices",
             "nav_order": 8,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0009",
@@ -205,7 +205,7 @@
             "nav_label": "Complaints",
             "nav_order": 9,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0010",
@@ -228,7 +228,7 @@
             "nav_label": "Templates & Media",
             "nav_order": 10,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0011",
@@ -251,7 +251,7 @@
             "nav_label": "Messaging Templates",
             "nav_order": 11,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0012",
@@ -274,7 +274,7 @@
             "nav_label": "Explainer Content",
             "nav_order": 12,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0013",
@@ -297,7 +297,7 @@
             "nav_label": "Rate Chart",
             "nav_order": 13,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0014",
@@ -320,7 +320,7 @@
             "nav_label": "Reports & Exports",
             "nav_order": 14,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0015",
@@ -343,7 +343,7 @@
             "nav_label": "Company Profile & Branding",
             "nav_order": 15,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0016",
@@ -366,7 +366,7 @@
             "nav_label": "Subscription & Billing",
             "nav_order": 16,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "module_id": "MOD-0017",
@@ -389,11 +389,11 @@
             "nav_label": "Scheme Settings",
             "nav_order": 17,
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         }
     ],
     "meta": {
         "version": 1,
-        "updated_at": ""
+        "updated_at": "2026-03-29T22:31:18+00:00"
     }
 }

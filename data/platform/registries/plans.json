@@ -28,7 +28,7 @@
             "active_flag": true,
             "description": "Starter bundle for new vendors.",
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "plan_id": "PLN-0002",
@@ -64,7 +64,7 @@
             "active_flag": true,
             "description": "Most popular plan for growing vendors.",
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         },
         {
             "plan_id": "PLN-0003",
@@ -99,11 +99,11 @@
             "active_flag": true,
             "description": "Complete package with advanced modules.",
             "created_at": "2026-03-29T21:22:36+00:00",
-            "updated_at": "2026-03-29T21:22:36+00:00"
+            "updated_at": "2026-03-29T22:31:18+00:00"
         }
     ],
     "meta": {
         "version": 1,
-        "updated_at": ""
+        "updated_at": "2026-03-29T22:31:18+00:00"
     }
 }

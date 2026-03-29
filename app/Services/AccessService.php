@@ -6,14 +6,18 @@ namespace App\Services;
 
 class AccessService
 {
-    private const CORE_MODULES = ['dashboard', 'company-branding', 'subscription-billing', 'profile', 'scheme-settings'];
-
     public static function evaluateVendorAccess(array $vendor): array
     {
         $subscription = RegistryService::getSubscriptionForVendor((string) ($vendor['vendor_id'] ?? ''));
+        if ($subscription) {
+            $subscription = SubscriptionService::hydrateSubscription($subscription);
+            SubscriptionService::refreshVendorBySubscription((string) $vendor['vendor_id'], $subscription);
+            $vendor = RegistryService::getVendorById((string) $vendor['vendor_id']) ?? $vendor;
+        }
+
         $subscriptionStatus = (string) ($subscription['subscription_status'] ?? ($vendor['subscription_status'] ?? 'none'));
         $enabledSchemes = array_values(array_filter((array) ($vendor['enabled_schemes'] ?? [])));
-        $enabledModules = array_values(array_filter((array) ($vendor['enabled_modules'] ?? [])));
+        $enabledModules = array_values(array_filter((array) ($subscription['entitled_modules'] ?? ($vendor['enabled_modules'] ?? []))));
 
         $result = [
             'is_allowed' => false,
@@ -32,14 +36,8 @@ class AccessService
             return self::blocked($result, $result['verification_status'] === 'rejected' ? 'rejected' : 'pending');
         }
 
-        if ($result['account_status'] === 'inactive') {
-            return self::blocked($result, 'inactive');
-        }
-        if ($result['account_status'] === 'suspended') {
-            return self::blocked($result, 'suspended');
-        }
-        if ($result['account_status'] === 'cancelled') {
-            return self::blocked($result, 'cancelled');
+        if (in_array($result['account_status'], ['inactive', 'suspended', 'cancelled'], true)) {
+            return self::blocked($result, $result['account_status']);
         }
 
         if (!in_array($subscriptionStatus, ['trial', 'active'], true)) {
@@ -85,19 +83,16 @@ class AccessService
         }
 
         $module = RegistryService::getModuleByKey($moduleKey);
-        if (!$module || empty($module['active_flag'])) {
+        if (!$module || empty($module['enabled_flag'])) {
             return false;
-        }
-
-        if (in_array($moduleKey, self::CORE_MODULES, true)) {
-            return true;
         }
 
         if ($schemeKey !== null && !self::hasSchemeAccess($vendor, $schemeKey)) {
             return false;
         }
 
-        return in_array($moduleKey, (array) ($vendor['enabled_modules'] ?? []), true);
+        $freshVendor = RegistryService::getVendorById((string) ($vendor['vendor_id'] ?? '')) ?? $vendor;
+        return in_array($moduleKey, (array) ($freshVendor['enabled_modules'] ?? []), true);
     }
 
     public static function blockedMessage(string $reasonCode): string
@@ -109,7 +104,7 @@ class AccessService
             'suspended' => 'Your account is currently suspended. Please contact support or the platform administrator.',
             'cancelled' => 'Your account is no longer active.',
             'expired' => 'Your subscription/trial has expired. Please contact support to reactivate access.',
-            'subscription_cancelled' => 'Your account is no longer active.',
+            'subscription_cancelled' => 'Your subscription is cancelled and workspace access is blocked.',
             'no_subscription' => 'Your account does not have an active subscription yet.',
             'no_scheme_access' => 'Your account does not currently have access to any enabled scheme.',
             default => 'You do not have access to this section.',

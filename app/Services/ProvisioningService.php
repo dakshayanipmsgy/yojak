@@ -32,7 +32,6 @@ class ProvisioningService
         $plan = RegistryService::getPlanByKey($planKey) ?? RegistryService::getAllPlans()[0];
         $vendorId = CounterService::next('vendor');
         $tenantId = CounterService::next('tenant');
-        $subscriptionId = CounterService::next('subscription');
         $schemeKey = $assignedSchemeKeys[0] ?? 'pm_surya_ghar';
         $entitled = array_values(array_unique(array_merge($plan['included_modules'] ?? [], ['dashboard', 'company-branding', 'subscription-billing'])));
 
@@ -59,31 +58,16 @@ class ProvisioningService
         $vendors[] = $vendor;
         RegistryService::put('vendors', $vendors);
 
-        $subscriptions = RegistryService::get('subscriptions');
-        $subscriptions[] = [
-            'subscription_id' => $subscriptionId,
-            'vendor_id' => $vendorId,
-            'tenant_id' => $tenantId,
-            'scheme_key' => $schemeKey,
+        self::provisionTenantFilesystem($vendor, $plan, $billingCycle, $trialDays, $approverAdminId);
+        SubscriptionService::assignForVendor($vendor, [
             'plan_key' => $plan['plan_key'],
+            'subscription_mode' => 'plan',
             'billing_cycle' => $billingCycle,
             'subscription_status' => 'trial',
-            'started_at' => date('c'),
-            'trial_started_at' => date('c'),
-            'trial_ends_at' => date('c', strtotime('+' . $trialDays . ' days')),
-            'active_from' => null,
-            'active_until' => null,
-            'cancelled_at' => null,
-            'override_pricing_json' => [],
-            'entitled_modules' => $entitled,
+            'trial_days_assigned' => $trialDays,
             'source_type' => 'signup',
             'source_ref' => $signup['signup_id'],
-            'created_at' => date('c'),
-            'updated_at' => date('c'),
-        ];
-        RegistryService::put('subscriptions', $subscriptions);
-
-        self::provisionTenantFilesystem($vendor, $plan, $billingCycle, $trialDays, $approverAdminId);
+        ]);
 
         if (!$skipSignupUpdate) {
             $pending = RegistryService::get('pending_signups');

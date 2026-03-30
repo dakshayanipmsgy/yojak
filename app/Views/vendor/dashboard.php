@@ -21,7 +21,7 @@
         <div class="card">
             <p><strong><?= htmlspecialchars((string) ($scheme['scheme_name'] ?? 'Scheme')) ?></strong></p>
             <p><?= htmlspecialchars((string) ($scheme['description'] ?? '')) ?></p>
-            <p>Leads: <?= htmlspecialchars((string) ($scheme['summary']['leads_count'] ?? 0)) ?> · Customers: <?= htmlspecialchars((string) ($scheme['summary']['customers_count'] ?? 0)) ?> · Open complaints: <?= htmlspecialchars((string) ($scheme['summary']['open_complaints_count'] ?? 0)) ?></p>
+            <p>Leads: <?= htmlspecialchars((string) ($scheme['summary']['leads_count'] ?? 0)) ?> · Customers: <?= htmlspecialchars((string) ($scheme['summary']['customers_count'] ?? 0)) ?> · Accepted quotations: <?= htmlspecialchars((string) ($scheme['summary']['accepted_quotations_count'] ?? 0)) ?> · Agreements: <?= htmlspecialchars((string) ($scheme['summary']['pending_agreements_count'] ?? 0)) ?> · Receipts: <?= htmlspecialchars((string) ($scheme['summary']['receipts_count'] ?? 0)) ?> · Invoices: <?= htmlspecialchars((string) ($scheme['summary']['invoices_count'] ?? 0)) ?> · Open complaints: <?= htmlspecialchars((string) ($scheme['summary']['open_complaints_count'] ?? 0)) ?></p>
             <a class="btn" href="<?= htmlspecialchars((string) ($scheme['dashboard_path'] ?? '/app/dashboard')) ?>">Open Scheme Dashboard</a>
         </div>
     <?php endforeach; ?>

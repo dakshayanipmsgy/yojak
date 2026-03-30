@@ -482,6 +482,11 @@ if (str_starts_with($path, '/app')) {
             'customers' => '/customers',
             'solar-finance' => '/solar-finance',
             'quotations' => '/quotations',
+            'agreements' => '/agreements',
+            'payment-receipts' => '/payment-receipts',
+            'invoices' => '/invoices',
+            'complaints' => '/complaints',
+            'reports-exports' => '/reports-exports',
         ];
         foreach ($moduleMatch as $mod => $prefix) {
             if (str_starts_with($subPath, $prefix)) {
@@ -493,6 +498,33 @@ if (str_starts_with($path, '/app')) {
         if ($method === 'POST') {
             requireCsrfOrAbort();
         }
+        $findById = static function (array $rows, string $field, string $id): array {
+            foreach ($rows as $row) {
+                if ((string) ($row[$field] ?? '') === $id) {
+                    return $row;
+                }
+            }
+            return [];
+        };
+        $statusOf = static function (array $row, string $fallback = 'draft'): string {
+            foreach ($row as $k => $v) {
+                if (str_ends_with((string) $k, '_status')) {
+                    return (string) $v;
+                }
+            }
+            return (string) ($row['status'] ?? $fallback);
+        };
+        $makePrintableHtml = static function (string $title, array $company, array $customer, array $bodySections): string {
+            $html = '<html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:20px;color:#1f2937}h1,h2,h3{margin-bottom:8px}.muted{color:#6b7280}table{width:100%;border-collapse:collapse}td,th{border:1px solid #d1d5db;padding:6px;vertical-align:top}.section{margin:16px 0}@media print{.no-print{display:none}}</style></head><body>';
+            $html .= '<h1>' . htmlspecialchars($title) . '</h1>';
+            $html .= '<p class="muted">' . htmlspecialchars((string) ($company['company_name'] ?? 'Vendor')) . ' · ' . htmlspecialchars((string) ($company['gst_number'] ?? '')) . '</p>';
+            $html .= '<div class="section"><h3>Customer</h3><pre>' . htmlspecialchars(json_encode($customer, JSON_PRETTY_PRINT)) . '</pre></div>';
+            foreach ($bodySections as $label => $val) {
+                $html .= '<div class="section"><h3>' . htmlspecialchars((string) $label) . '</h3><pre>' . htmlspecialchars(json_encode($val, JSON_PRETTY_PRINT)) . '</pre></div>';
+            }
+            $html .= '<p class="muted">Generated at ' . htmlspecialchars(date('c')) . '</p></body></html>';
+            return $html;
+        };
 
         if ($subPath === '/leads/sample-csv') {
             header('Content-Type: text/csv');
@@ -646,6 +678,35 @@ if (str_starts_with($path, '/app')) {
             $pageData['customers'] = $customers;
             $pageData['quotations'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'quotations');
             $pageData['solar_finance'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'solar_finance');
+            if ($subPath === '/customers/view') {
+                $customerId = (string) ($_GET['id'] ?? '');
+                $pageData['customer_detail'] = $findById($customers, 'customer_id', $customerId);
+                $agreements = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'agreements');
+                $receipts = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'receipts');
+                $invoices = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'invoices');
+                $complaints = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'complaints');
+                $history = [
+                    'Quotation History' => [],
+                    'Solar & Finance History' => [],
+                    'Agreement History' => [],
+                    'Payment Receipt History' => [],
+                    'Invoice History' => [],
+                    'Complaint History' => [],
+                ];
+                foreach ($pageData['quotations'] as $q) {
+                    if ((string) ($q['customer_id'] ?? '') !== $customerId) continue;
+                    $history['Quotation History'][] = ['id' => (string) ($q['quotation_id'] ?? ''), 'status' => $statusOf($q), 'created_at' => (string) ($q['created_at'] ?? ''), 'view_path' => '/app/pm-surya-ghar/quotations/view?id=' . urlencode((string) ($q['quotation_id'] ?? ''))];
+                }
+                foreach ($pageData['solar_finance'] as $sf) {
+                    if ((string) ($sf['customer_id'] ?? '') !== $customerId) continue;
+                    $history['Solar & Finance History'][] = ['id' => (string) ($sf['solar_finance_id'] ?? ''), 'status' => $statusOf($sf), 'created_at' => (string) ($sf['created_at'] ?? ''), 'view_path' => '/app/pm-surya-ghar/solar-finance'];
+                }
+                foreach ($agreements as $a) { if ((string) ($a['customer_id'] ?? '') === $customerId) $history['Agreement History'][] = ['id' => (string) ($a['agreement_id'] ?? ''), 'status' => $statusOf($a), 'created_at' => (string) ($a['created_at'] ?? ''), 'view_path' => '/app/pm-surya-ghar/agreements/view?id=' . urlencode((string) ($a['agreement_id'] ?? ''))]; }
+                foreach ($receipts as $r) { if ((string) ($r['customer_id'] ?? '') === $customerId) $history['Payment Receipt History'][] = ['id' => (string) ($r['receipt_id'] ?? ''), 'status' => $statusOf($r), 'created_at' => (string) ($r['created_at'] ?? ''), 'view_path' => '/app/pm-surya-ghar/payment-receipts/view?id=' . urlencode((string) ($r['receipt_id'] ?? ''))]; }
+                foreach ($invoices as $i) { if ((string) ($i['customer_id'] ?? '') === $customerId) $history['Invoice History'][] = ['id' => (string) ($i['invoice_id'] ?? ''), 'status' => $statusOf($i), 'created_at' => (string) ($i['created_at'] ?? ''), 'view_path' => '/app/pm-surya-ghar/invoices/view?id=' . urlencode((string) ($i['invoice_id'] ?? ''))]; }
+                foreach ($complaints as $c) { if ((string) ($c['customer_id'] ?? '') === $customerId) $history['Complaint History'][] = ['id' => (string) ($c['complaint_id'] ?? ''), 'status' => $statusOf($c, 'open'), 'created_at' => (string) ($c['created_at'] ?? ''), 'view_path' => '/app/pm-surya-ghar/complaints/view?id=' . urlencode((string) ($c['complaint_id'] ?? ''))]; }
+                $pageData['history_blocks'] = $history;
+            }
             render('Customers', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Customers'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Customers'], 'page' => 'customers', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
         }
 
@@ -668,7 +729,18 @@ if (str_starts_with($path, '/app')) {
                 PmSuryaGharOpsService::writeRecords($tenantId, 'solar_finance', $payload);
                 PmSuryaGharOpsService::writeIndex($tenantId, 'solar_finance', $items, 'solar_finance_id');
             }
-            $pageData['items'] = $items;
+            $filteredItems = $items;
+            $q = strtolower(trim((string) ($_GET['q'] ?? '')));
+            $statusFilter = (string) ($_GET['status'] ?? '');
+            $sort = (string) ($_GET['sort'] ?? 'newest');
+            $filteredItems = array_values(array_filter($filteredItems, function (array $row) use ($q, $statusFilter): bool {
+                if ($statusFilter !== '' && (string) ($row['agreement_status'] ?? '') !== $statusFilter) return false;
+                if ($q === '') return true;
+                $hay = strtolower(implode(' ', [(string) ($row['agreement_id'] ?? ''), (string) ($row['customer_id'] ?? ''), (string) ($row['source_quotation_id'] ?? ''), (string) (($row['customer_snapshot']['mobile'] ?? ''))]));
+                return str_contains($hay, $q);
+            }));
+            usort($filteredItems, fn(array $a, array $b): int => $sort === 'oldest' ? strcmp((string) ($a['created_at'] ?? ''), (string) ($b['created_at'] ?? '')) : strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')));
+            $pageData['items'] = $filteredItems;
             $pageData['customers'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers');
             $pageData['leads'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'leads');
             render('Solar & Finance', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Solar & Finance'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Solar & Finance'], 'page' => 'solar_finance', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
@@ -750,11 +822,338 @@ if (str_starts_with($path, '/app')) {
                     exit;
                 }
             }
+            $agreements = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'agreements');
+            $receipts = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'receipts');
+            $invoices = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'invoices');
+            $downstreamCounts = [];
+            foreach ($quotes as $q) {
+                $qid = (string) ($q['quotation_id'] ?? '');
+                $downstreamCounts[$qid] = ['agreements' => 0, 'receipts' => 0, 'invoices' => 0];
+                foreach ($agreements as $a) { if ((string) ($a['source_quotation_id'] ?? '') === $qid) $downstreamCounts[$qid]['agreements']++; }
+                foreach ($receipts as $r) { if ((string) ($r['source_quotation_id'] ?? '') === $qid) $downstreamCounts[$qid]['receipts']++; }
+                foreach ($invoices as $i) { if ((string) ($i['source_quotation_id'] ?? '') === $qid) $downstreamCounts[$qid]['invoices']++; }
+            }
             $pageData['quotes'] = $quotes;
             $pageData['customers'] = $customers;
             $pageData['leads'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'leads');
             $pageData['solar_finance'] = $solarFinance;
+            $pageData['downstream_counts'] = $downstreamCounts;
+            if ($subPath === '/quotations/view') {
+                $id = (string) ($_GET['id'] ?? '');
+                $pageData['quotation_detail'] = $findById($quotes, 'quotation_id', $id);
+                $pageData['downstream_detail'] = [
+                    'agreements' => array_values(array_filter($agreements, fn(array $a): bool => (string) ($a['source_quotation_id'] ?? '') === $id)),
+                    'receipts' => array_values(array_filter($receipts, fn(array $r): bool => (string) ($r['source_quotation_id'] ?? '') === $id)),
+                    'invoices' => array_values(array_filter($invoices, fn(array $i): bool => (string) ($i['source_quotation_id'] ?? '') === $id)),
+                ];
+            }
             render('Quotations', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Quotations'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Quotations'], 'page' => 'quotations', 'data' => $pageData, 'csrfToken' => $csrfToken, 'tenantId' => $tenantId], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/agreements')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'agreements');
+            $items = $payload['items'] ?? [];
+            $customers = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers');
+            $quotations = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'quotations');
+            if ($method === 'POST' && (string) ($_POST['action'] ?? '') === 'create') {
+                $customerId = (string) ($_POST['customer_id'] ?? '');
+                $quotationId = (string) ($_POST['source_quotation_id'] ?? '');
+                if ($customerId === '') {
+                    $pageData['errors'][] = 'Customer is required.';
+                } else {
+                    $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'agreements', 'AGR-');
+                    $customer = $findById($customers, 'customer_id', $customerId);
+                    $quotation = $quotationId !== '' ? $findById($quotations, 'quotation_id', $quotationId) : [];
+                    if ($quotationId !== '' && strtolower((string) ($quotation['quotation_status'] ?? '')) !== 'accepted') {
+                        $pageData['errors'][] = 'Agreement should originate from accepted quotation.';
+                    } else {
+                        $branding = TenantStorageService::getTenantBranding($tenantId);
+                        $templates = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'templates');
+                        $settings = TenantStorageService::getTenantSchemeSettings($tenantId, $schemeKey);
+                        $agreement = ['agreement_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_lead_id' => (string) ($quotation['source_lead_id'] ?? ''), 'source_quotation_id' => $quotationId, 'agreement_status' => (string) ($_POST['agreement_status'] ?? 'draft'), 'agreement_title' => (string) ($_POST['agreement_title'] ?? ('Agreement ' . $id)), 'agreement_number_display' => $id, 'customer_snapshot' => $customer, 'quotation_snapshot_summary' => ['quotation_id' => (string) ($quotation['quotation_id'] ?? ''), 'pricing_summary' => (array) ($quotation['pricing_summary'] ?? [])], 'branding_snapshot' => $branding, 'template_snapshot' => (array) ($templates['data'] ?? []), 'terms_snapshot' => (array) ($settings['agreement_terms'] ?? []), 'agreement_sections' => ['project_summary' => (array) ($quotation['solar_at_a_glance'] ?? []), 'commercial_terms' => (array) ($quotation['pricing_summary'] ?? []), 'obligations' => (array) ($settings['agreement_obligations'] ?? [])], 'payment_terms_snapshot' => (array) ($settings['payment_terms'] ?? []), 'warranty_snapshot' => (array) ($settings['warranty_terms'] ?? []), 'next_steps_snapshot' => (array) ($settings['next_steps'] ?? []), 'notes' => (string) ($_POST['notes'] ?? ''), 'signed_status_placeholder' => 'pending', 'accepted_context' => ['accepted_at' => (string) ($quotation['accepted_at'] ?? '')], 'created_at' => date('c'), 'updated_at' => date('c')];
+                        $agreement['snapshot_file'] = PmSuryaGharOpsService::snapshot($tenantId, 'agreements', $id, $agreement);
+                        $items[] = $agreement;
+                        $payload['items'] = $items;
+                        PmSuryaGharOpsService::writeRecords($tenantId, 'agreements', $payload);
+                        PmSuryaGharOpsService::writeIndex($tenantId, 'agreement', $items, 'agreement_id', 'agreement_status');
+                    }
+                }
+            }
+            if ($subPath === '/agreements/create-from-quotation') {
+                $pageData['prefill'] = ['source_quotation_id' => (string) ($_GET['quotation_id'] ?? '')];
+                if ($pageData['prefill']['source_quotation_id'] !== '') {
+                    $q = $findById($quotations, 'quotation_id', (string) $pageData['prefill']['source_quotation_id']);
+                    $pageData['prefill']['customer_id'] = (string) ($q['customer_id'] ?? '');
+                }
+            }
+            if ($subPath === '/agreements/print') {
+                $id = (string) ($_GET['id'] ?? '');
+                $detail = $findById($items, 'agreement_id', $id);
+                if ($detail !== []) {
+                    $html = $makePrintableHtml('Agreement ' . $id, (array) ($detail['branding_snapshot'] ?? []), (array) ($detail['customer_snapshot'] ?? []), ['Reference' => ['quotation' => $detail['source_quotation_id'] ?? ''], 'Sections' => (array) ($detail['agreement_sections'] ?? []), 'Terms' => (array) ($detail['terms_snapshot'] ?? [])]);
+                    $docDir = TenantStorageService::getTenantSchemePath($tenantId, $schemeKey) . '/documents/agreements';
+                    \App\Core\JsonStorage::ensureDir($docDir);
+                    file_put_contents($docDir . '/agreement_' . $id . '.html', $html);
+                    header('Content-Type: text/html; charset=UTF-8');
+                    echo $html;
+                    exit;
+                }
+            }
+            if ($subPath === '/agreements/view' || $subPath === '/agreements/edit') {
+                $pageData['detail'] = $findById($items, 'agreement_id', (string) ($_GET['id'] ?? ''));
+            }
+            $filteredItems = $items;
+            $q = strtolower(trim((string) ($_GET['q'] ?? '')));
+            $statusFilter = (string) ($_GET['status'] ?? '');
+            $sort = (string) ($_GET['sort'] ?? 'newest');
+            $filteredItems = array_values(array_filter($filteredItems, function (array $row) use ($q, $statusFilter): bool {
+                if ($statusFilter !== '' && (string) ($row['agreement_status'] ?? '') !== $statusFilter) return false;
+                if ($q === '') return true;
+                $hay = strtolower(implode(' ', [(string) ($row['agreement_id'] ?? ''), (string) ($row['customer_id'] ?? ''), (string) ($row['source_quotation_id'] ?? ''), (string) (($row['customer_snapshot']['mobile'] ?? ''))]));
+                return str_contains($hay, $q);
+            }));
+            usort($filteredItems, fn(array $a, array $b): int => $sort === 'oldest' ? strcmp((string) ($a['created_at'] ?? ''), (string) ($b['created_at'] ?? '')) : strcmp((string) ($b['created_at'] ?? ''), (string) ($a['created_at'] ?? '')));
+            $pageData['items'] = $filteredItems;
+            render('Agreements', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Agreements'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Agreements'], 'page' => 'agreements', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/payment-receipts')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'receipts');
+            $items = $payload['items'] ?? [];
+            $customers = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers');
+            $agreements = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'agreements');
+            if ($method === 'POST' && (string) ($_POST['action'] ?? '') === 'create') {
+                $customerId = (string) ($_POST['customer_id'] ?? '');
+                if ($customerId === '') {
+                    $pageData['errors'][] = 'Customer is required.';
+                } else {
+                    $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'receipts', 'REC-');
+                    $customer = $findById($customers, 'customer_id', $customerId);
+                    $link = ['quotation' => (string) ($_POST['source_quotation_id'] ?? ''), 'agreement' => (string) ($_POST['source_agreement_id'] ?? '')];
+                    $receipt = ['receipt_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_quotation_id' => $link['quotation'], 'source_agreement_id' => $link['agreement'], 'receipt_status' => (string) ($_POST['receipt_status'] ?? 'issued'), 'receipt_number_display' => $id, 'receipt_date' => (string) ($_POST['receipt_date'] ?? date('Y-m-d')), 'amount_received' => (float) ($_POST['amount_received'] ?? 0), 'payment_mode' => (string) ($_POST['payment_mode'] ?? 'other'), 'transaction_reference' => (string) ($_POST['transaction_reference'] ?? ''), 'bank_reference' => (string) ($_POST['bank_reference'] ?? ''), 'received_from_name' => (string) ($_POST['received_from_name'] ?? ($customer['customer_name'] ?? '')), 'purpose' => (string) ($_POST['purpose'] ?? 'Advance payment'), 'notes' => (string) ($_POST['notes'] ?? ''), 'customer_snapshot' => $customer, 'branding_snapshot' => TenantStorageService::getTenantBranding($tenantId), 'linked_document_snapshot_summary' => ['quotation' => $link['quotation'], 'agreement' => $findById($agreements, 'agreement_id', $link['agreement'])], 'created_at' => date('c'), 'updated_at' => date('c')];
+                    $receipt['snapshot_file'] = PmSuryaGharOpsService::snapshot($tenantId, 'receipts', $id, $receipt);
+                    $items[] = $receipt;
+                    $payload['items'] = $items;
+                    PmSuryaGharOpsService::writeRecords($tenantId, 'receipts', $payload);
+                    PmSuryaGharOpsService::writeIndex($tenantId, 'receipt', $items, 'receipt_id', 'receipt_status');
+                }
+            }
+            if ($subPath === '/payment-receipts/create-from-agreement') {
+                $aid = (string) ($_GET['agreement_id'] ?? '');
+                $a = $findById($agreements, 'agreement_id', $aid);
+                $pageData['prefill'] = ['source_agreement_id' => $aid, 'source_quotation_id' => (string) ($a['source_quotation_id'] ?? ''), 'customer_id' => (string) ($a['customer_id'] ?? '')];
+            }
+            if ($subPath === '/payment-receipts/create-from-quotation') {
+                $qid = (string) ($_GET['quotation_id'] ?? '');
+                $quotes = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'quotations');
+                $q = $findById($quotes, 'quotation_id', $qid);
+                $pageData['prefill'] = ['source_quotation_id' => $qid, 'customer_id' => (string) ($q['customer_id'] ?? '')];
+            }
+            if ($subPath === '/payment-receipts/create' && (string) ($_GET['customer_id'] ?? '') !== '') {
+                $pageData['prefill'] = ['customer_id' => (string) ($_GET['customer_id'] ?? '')];
+            }
+            if ($subPath === '/payment-receipts/print') {
+                $id = (string) ($_GET['id'] ?? '');
+                $detail = $findById($items, 'receipt_id', $id);
+                if ($detail !== []) {
+                    $html = $makePrintableHtml('Payment Receipt ' . $id, (array) ($detail['branding_snapshot'] ?? []), (array) ($detail['customer_snapshot'] ?? []), ['Receipt' => $detail, 'Linked Docs' => (array) ($detail['linked_document_snapshot_summary'] ?? [])]);
+                    $docDir = TenantStorageService::getTenantSchemePath($tenantId, $schemeKey) . '/documents/receipts';
+                    \App\Core\JsonStorage::ensureDir($docDir);
+                    file_put_contents($docDir . '/receipt_' . $id . '.html', $html);
+                    header('Content-Type: text/html; charset=UTF-8');
+                    echo $html;
+                    exit;
+                }
+            }
+            if ($subPath === '/payment-receipts/view' || $subPath === '/payment-receipts/edit') {
+                $pageData['detail'] = $findById($items, 'receipt_id', (string) ($_GET['id'] ?? ''));
+            }
+            $filteredItems = $items;
+            $q = strtolower(trim((string) ($_GET['q'] ?? '')));
+            $statusFilter = (string) ($_GET['status'] ?? '');
+            $modeFilter = (string) ($_GET['payment_mode'] ?? '');
+            $filteredItems = array_values(array_filter($filteredItems, function (array $row) use ($q, $statusFilter, $modeFilter): bool {
+                if ($statusFilter !== '' && (string) ($row['receipt_status'] ?? '') !== $statusFilter) return false;
+                if ($modeFilter !== '' && (string) ($row['payment_mode'] ?? '') !== $modeFilter) return false;
+                if ($q === '') return true;
+                $hay = strtolower(implode(' ', [(string) ($row['receipt_id'] ?? ''), (string) ($row['transaction_reference'] ?? ''), (string) ($row['customer_id'] ?? ''), (string) ($row['source_quotation_id'] ?? ''), (string) ($row['source_agreement_id'] ?? '')]));
+                return str_contains($hay, $q);
+            }));
+            $pageData['items'] = $filteredItems;
+            render('Payment Receipts', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Payment Receipts'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Payment Receipts'], 'page' => 'payment_receipts', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/invoices')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'invoices');
+            $items = $payload['items'] ?? [];
+            $customers = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers');
+            if ($subPath === '/invoices/create-from-quotation') {
+                $qid = (string) ($_GET['quotation_id'] ?? '');
+                $quotes = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'quotations');
+                $q = $findById($quotes, 'quotation_id', $qid);
+                $pageData['prefill'] = ['source_quotation_id' => $qid, 'customer_id' => (string) ($q['customer_id'] ?? '')];
+            }
+            if ($subPath === '/invoices/create-from-agreement') {
+                $aid = (string) ($_GET['agreement_id'] ?? '');
+                $agreements = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'agreements');
+                $a = $findById($agreements, 'agreement_id', $aid);
+                $pageData['prefill'] = ['source_agreement_id' => $aid, 'source_quotation_id' => (string) ($a['source_quotation_id'] ?? ''), 'customer_id' => (string) ($a['customer_id'] ?? '')];
+            }
+            if ($method === 'POST' && (string) ($_POST['action'] ?? '') === 'create') {
+                $customerId = (string) ($_POST['customer_id'] ?? '');
+                if ($customerId === '') {
+                    $pageData['errors'][] = 'Customer is required.';
+                } else {
+                    $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'invoices', 'INV-');
+                    $rows = preg_split('/\R+/', trim((string) ($_POST['items_text'] ?? ''))) ?: [];
+                    $invoiceItems = [];
+                    foreach ($rows as $row) {
+                        if (trim($row) === '') continue;
+                        [$desc, $qty, $unit, $rate, $taxRate] = array_pad(array_map('trim', explode('|', $row)), 5, '');
+                        $quantity = max(1.0, (float) $qty);
+                        $unitRate = (float) $rate;
+                        $line = $quantity * $unitRate;
+                        $taxPercent = (float) $taxRate;
+                        $taxAmount = $line * ($taxPercent / 100);
+                        $invoiceItems[] = ['description' => $desc, 'quantity' => $quantity, 'unit' => ($unit !== '' ? $unit : 'nos'), 'unit_rate' => $unitRate, 'line_total' => round($line, 2), 'tax_rate' => $taxPercent, 'tax_amount' => round($taxAmount, 2)];
+                    }
+                    if ($invoiceItems === []) $invoiceItems[] = ['description' => 'Solar package', 'quantity' => 1, 'unit' => 'nos', 'unit_rate' => 0, 'line_total' => 0, 'tax_rate' => 0, 'tax_amount' => 0];
+                    $subtotal = array_sum(array_column($invoiceItems, 'line_total'));
+                    $tax = array_sum(array_column($invoiceItems, 'tax_amount'));
+                    $customer = $findById($customers, 'customer_id', $customerId);
+                    $branding = TenantStorageService::getTenantBranding($tenantId);
+                    $invoice = ['invoice_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_quotation_id' => (string) ($_POST['source_quotation_id'] ?? ''), 'source_agreement_id' => (string) ($_POST['source_agreement_id'] ?? ''), 'invoice_status' => (string) ($_POST['invoice_status'] ?? 'draft'), 'invoice_number_display' => (string) ($_POST['invoice_number_display'] ?? $id), 'invoice_date' => (string) ($_POST['invoice_date'] ?? date('Y-m-d')), 'due_date' => (string) ($_POST['due_date'] ?? date('Y-m-d', strtotime('+15 days'))), 'customer_snapshot' => $customer, 'branding_snapshot' => $branding, 'gst_snapshot' => ['vendor_gst_number' => (string) ($_POST['vendor_gst_number'] ?? ($branding['gst_number'] ?? '')), 'customer_gst_number' => (string) ($_POST['customer_gst_number'] ?? ''), 'place_of_supply' => (string) ($_POST['place_of_supply'] ?? '')], 'invoice_items' => $invoiceItems, 'subtotal' => round($subtotal, 2), 'tax_summary' => ['tax_amount' => round($tax, 2)], 'total_amount' => round($subtotal + $tax, 2), 'notes' => (string) ($_POST['notes'] ?? ''), 'payment_instructions_snapshot' => ['bank_name' => (string) ($branding['bank_name'] ?? ''), 'upi' => (string) ($branding['upi_id'] ?? '')], 'created_at' => date('c'), 'updated_at' => date('c')];
+                    $invoice['snapshot_file'] = PmSuryaGharOpsService::snapshot($tenantId, 'invoices', $id, $invoice);
+                    $items[] = $invoice;
+                    $payload['items'] = $items;
+                    PmSuryaGharOpsService::writeRecords($tenantId, 'invoices', $payload);
+                    PmSuryaGharOpsService::writeIndex($tenantId, 'invoice', $items, 'invoice_id', 'invoice_status');
+                }
+            }
+            if ($subPath === '/invoices/print') {
+                $id = (string) ($_GET['id'] ?? '');
+                $detail = $findById($items, 'invoice_id', $id);
+                if ($detail !== []) {
+                    $html = $makePrintableHtml('Invoice ' . $id, (array) ($detail['branding_snapshot'] ?? []), (array) ($detail['customer_snapshot'] ?? []), ['GST' => (array) ($detail['gst_snapshot'] ?? []), 'Items' => (array) ($detail['invoice_items'] ?? []), 'Totals' => ['subtotal' => $detail['subtotal'] ?? 0, 'tax' => $detail['tax_summary'] ?? [], 'total' => $detail['total_amount'] ?? 0]]);
+                    $docDir = TenantStorageService::getTenantSchemePath($tenantId, $schemeKey) . '/documents/invoices';
+                    \App\Core\JsonStorage::ensureDir($docDir);
+                    file_put_contents($docDir . '/invoice_' . $id . '.html', $html);
+                    header('Content-Type: text/html; charset=UTF-8');
+                    echo $html;
+                    exit;
+                }
+            }
+            if ($subPath === '/invoices/view' || $subPath === '/invoices/edit') {
+                $pageData['detail'] = $findById($items, 'invoice_id', (string) ($_GET['id'] ?? ''));
+            }
+            $filteredItems = $items;
+            $q = strtolower(trim((string) ($_GET['q'] ?? '')));
+            $statusFilter = (string) ($_GET['status'] ?? '');
+            $filteredItems = array_values(array_filter($filteredItems, function (array $row) use ($q, $statusFilter): bool {
+                if ($statusFilter !== '' && (string) ($row['invoice_status'] ?? '') !== $statusFilter) return false;
+                if ($q === '') return true;
+                $hay = strtolower(implode(' ', [(string) ($row['invoice_id'] ?? ''), (string) ($row['invoice_number_display'] ?? ''), (string) ($row['customer_id'] ?? ''), (string) ($row['source_quotation_id'] ?? ''), (string) ($row['source_agreement_id'] ?? '')]));
+                return str_contains($hay, $q);
+            }));
+            $pageData['items'] = $filteredItems;
+            render('Invoices', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Invoices'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Invoices'], 'page' => 'invoices', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/complaints')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'complaints');
+            $items = $payload['items'] ?? [];
+            $customers = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers');
+            if ($method === 'POST' && (string) ($_POST['action'] ?? '') === 'create') {
+                $customerId = (string) ($_POST['customer_id'] ?? '');
+                if ($customerId === '') {
+                    $pageData['errors'][] = 'Customer is required.';
+                } else {
+                    $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'complaints', 'CMP-');
+                    $items[] = ['complaint_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_quotation_id' => (string) ($_POST['source_quotation_id'] ?? ''), 'source_agreement_id' => (string) ($_POST['source_agreement_id'] ?? ''), 'source_invoice_id' => (string) ($_POST['source_invoice_id'] ?? ''), 'source_receipt_id' => (string) ($_POST['source_receipt_id'] ?? ''), 'category' => (string) ($_POST['category'] ?? 'other'), 'complaint_status' => (string) ($_POST['complaint_status'] ?? 'open'), 'priority' => (string) ($_POST['priority'] ?? 'medium'), 'title' => (string) ($_POST['title'] ?? ''), 'description' => (string) ($_POST['description'] ?? ''), 'assignee_text' => (string) ($_POST['assignee_text'] ?? ''), 'assignee_group' => (string) ($_POST['assignee_group'] ?? ''), 'raised_date' => (string) ($_POST['raised_date'] ?? date('Y-m-d')), 'last_updated_at' => date('c'), 'resolution_note' => (string) ($_POST['resolution_note'] ?? ''), 'customer_snapshot' => $findById($customers, 'customer_id', $customerId), 'tags' => (string) ($_POST['tags'] ?? ''), 'highlighted_flag' => isset($_POST['highlighted_flag']), 'notes_history' => [], 'created_at' => date('c'), 'updated_at' => date('c')];
+                    $payload['items'] = $items;
+                    PmSuryaGharOpsService::writeRecords($tenantId, 'complaints', $payload);
+                    PmSuryaGharOpsService::writeIndex($tenantId, 'complaint', $items, 'complaint_id', 'complaint_status');
+                }
+            }
+            if ($subPath === '/complaints/export') {
+                $status = (string) ($_GET['status'] ?? '');
+                $category = (string) ($_GET['category'] ?? '');
+                $assignee = strtolower(trim((string) ($_GET['assignee'] ?? '')));
+                $from = (string) ($_GET['from'] ?? '');
+                $to = (string) ($_GET['to'] ?? '');
+                $filtered = array_values(array_filter($items, function (array $row) use ($status, $category, $assignee, $from, $to): bool {
+                    if ($status !== '' && (string) ($row['complaint_status'] ?? '') !== $status) return false;
+                    if ($category !== '' && (string) ($row['category'] ?? '') !== $category) return false;
+                    if ($assignee !== '' && !str_contains(strtolower((string) ($row['assignee_text'] ?? '')), $assignee)) return false;
+                    $d = substr((string) ($row['raised_date'] ?? ''), 0, 10);
+                    if ($from !== '' && $d < $from) return false;
+                    if ($to !== '' && $d > $to) return false;
+                    return true;
+                }));
+                header('Content-Type: text/csv');
+                header('Content-Disposition: attachment; filename="complaints_export.csv"');
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['complaint_id', 'customer_id', 'customer_name', 'category', 'status', 'assignee_text', 'raised_date', 'updated_at']);
+                foreach ($filtered as $r) {
+                    fputcsv($out, [(string) ($r['complaint_id'] ?? ''), (string) ($r['customer_id'] ?? ''), (string) (($r['customer_snapshot']['customer_name'] ?? '')), (string) ($r['category'] ?? ''), (string) ($r['complaint_status'] ?? ''), (string) ($r['assignee_text'] ?? ''), (string) ($r['raised_date'] ?? ''), (string) ($r['updated_at'] ?? '')]);
+                }
+                fclose($out);
+                exit;
+            }
+            if ($subPath === '/complaints/view' || $subPath === '/complaints/edit') {
+                $pageData['detail'] = $findById($items, 'complaint_id', (string) ($_GET['id'] ?? ''));
+            }
+            $filteredItems = $items;
+            $q = strtolower(trim((string) ($_GET['q'] ?? '')));
+            $statusFilter = (string) ($_GET['status'] ?? '');
+            $categoryFilter = (string) ($_GET['category'] ?? '');
+            $filteredItems = array_values(array_filter($filteredItems, function (array $row) use ($q, $statusFilter, $categoryFilter): bool {
+                if ($statusFilter !== '' && (string) ($row['complaint_status'] ?? '') !== $statusFilter) return false;
+                if ($categoryFilter !== '' && (string) ($row['category'] ?? '') !== $categoryFilter) return false;
+                if ($q === '') return true;
+                $hay = strtolower(implode(' ', [(string) ($row['complaint_id'] ?? ''), (string) ($row['title'] ?? ''), (string) ($row['customer_id'] ?? ''), (string) ($row['category'] ?? ''), (string) ($row['assignee_text'] ?? '')]));
+                return str_contains($hay, $q);
+            }));
+            $pageData['items'] = $filteredItems;
+            render('Complaints', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Complaints'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Complaints'], 'page' => 'complaints', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/reports-exports')) {
+            $allRecords = [
+                'leads' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'leads'),
+                'customers' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers'),
+                'quotations' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'quotations'),
+                'solar_finance' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'solar_finance'),
+                'agreements' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'agreements'),
+                'receipts' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'receipts'),
+                'invoices' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'invoices'),
+                'complaints' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'complaints'),
+            ];
+            $summary = ['total_leads' => count($allRecords['leads']), 'active_leads' => count(array_filter($allRecords['leads'], fn(array $r): bool => strtolower((string) ($r['status'] ?? '')) !== 'archived')), 'converted_customers' => count(array_filter($allRecords['leads'], fn(array $r): bool => (string) ($r['status'] ?? '') === 'converted_to_customer')), 'total_customers' => count($allRecords['customers']), 'solar_finance_reports_count' => count($allRecords['solar_finance']), 'draft_quotations' => count(array_filter($allRecords['quotations'], fn(array $r): bool => (string) ($r['quotation_status'] ?? '') === 'draft')), 'accepted_quotations' => count(array_filter($allRecords['quotations'], fn(array $r): bool => (string) ($r['quotation_status'] ?? '') === 'accepted')), 'agreements_count' => count($allRecords['agreements']), 'receipts_count' => count($allRecords['receipts']), 'invoices_count' => count($allRecords['invoices']), 'open_complaints_count' => count(array_filter($allRecords['complaints'], fn(array $r): bool => in_array((string) ($r['complaint_status'] ?? ''), ['open', 'in_progress'], true)))];
+            $exportMap = [
+                '/reports-exports/leads' => ['file' => 'leads_export.csv', 'headers' => ['lead_id', 'contact_name', 'company_name', 'mobile', 'email', 'city', 'state', 'status', 'follow_up_date', 'best_time_to_call', 'intro_message_sent', 'detailed_message_sent', 'created_at'], 'rows' => array_map(fn(array $r): array => [(string) ($r['lead_id'] ?? ''), (string) ($r['contact_name'] ?? ''), (string) ($r['company_name'] ?? ''), (string) ($r['mobile'] ?? ''), (string) ($r['email'] ?? ''), (string) ($r['city'] ?? ''), (string) ($r['state'] ?? ''), (string) ($r['status'] ?? ''), (string) ($r['follow_up_date'] ?? ''), (string) ($r['best_time_to_call'] ?? ''), !empty($r['intro_message_sent_flag']) ? 'yes' : 'no', !empty($r['detailed_message_sent_flag']) ? 'yes' : 'no', (string) ($r['created_at'] ?? '')], $allRecords['leads'])],
+                '/reports-exports/customers' => ['file' => 'customers_export.csv', 'headers' => ['customer_id', 'customer_name', 'mobile', 'email', 'city', 'state', 'source_lead_id', 'monthly_bill', 'monthly_units', 'created_at'], 'rows' => array_map(fn(array $r): array => [(string) ($r['customer_id'] ?? ''), (string) ($r['customer_name'] ?? ''), (string) ($r['mobile'] ?? ''), (string) ($r['email'] ?? ''), (string) ($r['city'] ?? ''), (string) ($r['state'] ?? ''), (string) ($r['source_lead_id'] ?? ''), (string) ($r['monthly_bill'] ?? ''), (string) ($r['monthly_units'] ?? ''), (string) ($r['created_at'] ?? '')], $allRecords['customers'])],
+                '/reports-exports/quotations' => ['file' => 'quotations_export.csv', 'headers' => ['quotation_id', 'quotation_root_id', 'revision_no', 'customer_id', 'customer_name', 'status', 'source_solar_finance_id', 'created_at', 'accepted_at', 'public_share_enabled'], 'rows' => array_map(fn(array $r): array => [(string) ($r['quotation_id'] ?? ''), (string) ($r['quotation_root_id'] ?? ''), (string) ($r['revision_no'] ?? ''), (string) ($r['customer_id'] ?? ''), (string) (($r['customer_snapshot']['customer_name'] ?? '')), (string) ($r['quotation_status'] ?? ''), (string) ($r['source_solar_finance_id'] ?? ''), (string) ($r['created_at'] ?? ''), (string) ($r['accepted_at'] ?? ''), !empty($r['public_share_enabled']) ? 'yes' : 'no'], $allRecords['quotations'])],
+                '/reports-exports/solar-finance' => ['file' => 'solar_finance_export.csv', 'headers' => ['solar_finance_id', 'customer_id', 'lead_id', 'system_type', 'selected_system_size', 'funding_scenario_summary', 'status', 'created_at'], 'rows' => array_map(fn(array $r): array => [(string) ($r['solar_finance_id'] ?? ''), (string) ($r['customer_id'] ?? ''), (string) ($r['source_lead_id'] ?? ''), (string) ($r['system_type'] ?? ''), (string) ($r['selected_system_size'] ?? ''), json_encode($r['funding_options_summary'] ?? []), (string) ($r['status'] ?? ''), (string) ($r['created_at'] ?? '')], $allRecords['solar_finance'])],
+                '/reports-exports/complaints' => ['file' => 'complaints_export.csv', 'headers' => ['complaint_id', 'customer_id', 'customer_name', 'category', 'status', 'assignee_text', 'raised_date', 'updated_at'], 'rows' => array_map(fn(array $r): array => [(string) ($r['complaint_id'] ?? ''), (string) ($r['customer_id'] ?? ''), (string) (($r['customer_snapshot']['customer_name'] ?? '')), (string) ($r['category'] ?? ''), (string) ($r['complaint_status'] ?? ''), (string) ($r['assignee_text'] ?? ''), (string) ($r['raised_date'] ?? ''), (string) ($r['updated_at'] ?? '')], $allRecords['complaints'])],
+                '/reports-exports/summary' => ['file' => 'summary_export.csv', 'headers' => ['metric', 'value'], 'rows' => array_map(fn(string $k, mixed $v): array => [$k, (string) $v], array_keys($summary), array_values($summary))],
+            ];
+            if (isset($exportMap[$subPath])) {
+                $exp = $exportMap[$subPath];
+                $docDir = TenantStorageService::getTenantSchemePath($tenantId, $schemeKey) . '/documents/reports';
+                \App\Core\JsonStorage::ensureDir($docDir);
+                $filePath = $docDir . '/' . $exp['file'];
+                $fp = fopen($filePath, 'w');
+                fputcsv($fp, $exp['headers']);
+                foreach ($exp['rows'] as $row) fputcsv($fp, $row);
+                fclose($fp);
+                header('Content-Type: text/csv');
+                header('Content-Disposition: attachment; filename="' . $exp['file'] . '"');
+                readfile($filePath);
+                exit;
+            }
+            $pageData['summary'] = $summary;
+            render('Reports & Exports', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Reports & Exports'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Reports & Exports'], 'page' => 'reports_exports', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
         }
     }
         $schemeSummaries[] = [

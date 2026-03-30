@@ -1,20 +1,189 @@
 {
-    "data": {
-        "stages": [
-            {"key": "lead", "label": "Lead", "order": 1, "category": "pre-sales", "description": "A prospect exists but has not progressed into proposal flow.", "primary_modules": ["leads"], "allowed_next_stages": ["engagement"]},
-            {"key": "engagement", "label": "Engagement", "order": 2, "category": "qualification", "description": "Contact and follow-up activity has started.", "primary_modules": ["leads"], "allowed_next_stages": ["detailed_information_shared", "solar_finance"]},
-            {"key": "detailed_information_shared", "label": "Detailed information shared", "order": 3, "category": "qualification", "description": "Scheme details, templates, or explainers are shared.", "primary_modules": ["leads", "messaging-templates", "explainer-content"], "allowed_next_stages": ["solar_finance", "quotation"]},
-            {"key": "solar_finance", "label": "Solar and Finance", "order": 4, "category": "solutioning", "description": "Feasibility and funding exploration stage.", "primary_modules": ["solar-finance", "rate-chart", "explainer-content"], "allowed_next_stages": ["quotation"]},
-            {"key": "quotation", "label": "Quotation", "order": 5, "category": "proposal", "description": "Structured proposal drafting and revision.", "primary_modules": ["quotations", "templates-media", "messaging-templates", "rate-chart"], "allowed_next_stages": ["quotation_accepted", "agreement"]},
-            {"key": "quotation_accepted", "label": "Quotation accepted", "order": 6, "category": "commercial", "description": "Accepted quotation moves journey to agreement.", "primary_modules": ["quotations", "agreements"], "allowed_next_stages": ["agreement"]},
-            {"key": "agreement", "label": "Agreement", "order": 7, "category": "commercial", "description": "Formal agreement generation and confirmation.", "primary_modules": ["agreements", "company-branding", "templates-media"], "allowed_next_stages": ["payment_receipt", "invoice"]},
-            {"key": "payment_receipt", "label": "Payment Receipt", "order": 8, "category": "commercial", "description": "Receipts for customer payments.", "primary_modules": ["payment-receipts"], "allowed_next_stages": ["invoice"]},
-            {"key": "invoice", "label": "Invoice", "order": 9, "category": "commercial", "description": "Invoice generation linked to customer journey.", "primary_modules": ["invoices"], "allowed_next_stages": ["complaint_support"]},
-            {"key": "complaint_support", "label": "Complaint support", "order": 10, "category": "support", "description": "Post-sale support and complaints.", "primary_modules": ["complaints"], "allowed_next_stages": []}
+  "data": {
+    "stages": [
+      {
+        "key": "lead",
+        "label": "Lead",
+        "order": 1,
+        "category": "pre-sales",
+        "description": "A prospect exists but has not progressed into proposal flow.",
+        "primary_modules": [
+          "leads"
+        ],
+        "allowed_next_stages": [
+          "engagement"
         ]
-    },
-    "meta": {
-        "version": 2,
-        "updated_at": "2026-03-29T00:00:00+00:00"
-    }
+      },
+      {
+        "key": "engagement",
+        "label": "Engagement",
+        "order": 2,
+        "category": "qualification",
+        "description": "Contact and follow-up activity has started.",
+        "primary_modules": [
+          "leads"
+        ],
+        "allowed_next_stages": [
+          "detailed_information_shared",
+          "solar_finance"
+        ]
+      },
+      {
+        "key": "detailed_information_shared",
+        "label": "Detailed information shared",
+        "order": 3,
+        "category": "qualification",
+        "description": "Scheme details, templates, or explainers are shared.",
+        "primary_modules": [
+          "leads",
+          "messaging-templates",
+          "explainer-content"
+        ],
+        "allowed_next_stages": [
+          "solar_finance",
+          "quotation"
+        ]
+      },
+      {
+        "key": "solar_finance",
+        "label": "Solar and Finance",
+        "order": 4,
+        "category": "solutioning",
+        "description": "Feasibility and funding exploration stage.",
+        "primary_modules": [
+          "solar-finance",
+          "rate-chart",
+          "explainer-content"
+        ],
+        "allowed_next_stages": [
+          "quotation"
+        ]
+      },
+      {
+        "key": "quotation",
+        "label": "Quotation",
+        "order": 5,
+        "category": "proposal",
+        "description": "Structured proposal drafting and revision.",
+        "primary_modules": [
+          "quotations",
+          "templates-media",
+          "messaging-templates",
+          "rate-chart"
+        ],
+        "allowed_next_stages": [
+          "quotation_accepted",
+          "agreement"
+        ]
+      },
+      {
+        "key": "quotation_accepted",
+        "label": "Quotation accepted",
+        "order": 6,
+        "category": "commercial",
+        "description": "Accepted quotation moves journey to agreement.",
+        "primary_modules": [
+          "quotations",
+          "agreements"
+        ],
+        "allowed_next_stages": [
+          "agreement"
+        ]
+      },
+      {
+        "key": "agreement",
+        "label": "Agreement",
+        "order": 7,
+        "category": "commercial",
+        "description": "Formal agreement generation and confirmation.",
+        "primary_modules": [
+          "agreements",
+          "company-branding",
+          "templates-media"
+        ],
+        "allowed_next_stages": [
+          "payment_receipt",
+          "invoice"
+        ]
+      },
+      {
+        "key": "payment_receipt",
+        "label": "Payment Receipt",
+        "order": 8,
+        "category": "commercial",
+        "description": "Receipts for customer payments.",
+        "primary_modules": [
+          "payment-receipts"
+        ],
+        "allowed_next_stages": [
+          "invoice"
+        ]
+      },
+      {
+        "key": "invoice",
+        "label": "Invoice",
+        "order": 9,
+        "category": "commercial",
+        "description": "Invoice generation linked to customer journey.",
+        "primary_modules": [
+          "invoices"
+        ],
+        "allowed_next_stages": [
+          "complaint_support"
+        ]
+      },
+      {
+        "key": "complaint_support",
+        "label": "Complaint support",
+        "order": 10,
+        "category": "support",
+        "description": "Post-sale support and complaints.",
+        "primary_modules": [
+          "complaints"
+        ],
+        "allowed_next_stages": []
+      }
+    ],
+    "dashboard_quick_actions": [
+      {
+        "key": "create_agreement",
+        "label": "Create Agreement",
+        "path": "/app/pm-surya-ghar/agreements/create-from-quotation"
+      },
+      {
+        "key": "create_receipt",
+        "label": "Create Receipt",
+        "path": "/app/pm-surya-ghar/payment-receipts/create"
+      },
+      {
+        "key": "create_invoice",
+        "label": "Create Invoice",
+        "path": "/app/pm-surya-ghar/invoices/create"
+      },
+      {
+        "key": "log_complaint",
+        "label": "Log Complaint",
+        "path": "/app/pm-surya-ghar/complaints/create"
+      },
+      {
+        "key": "export_reports",
+        "label": "Export Reports",
+        "path": "/app/pm-surya-ghar/reports-exports"
+      },
+      {
+        "key": "add_lead",
+        "label": "Add Lead",
+        "path": "/app/pm-surya-ghar/leads"
+      },
+      {
+        "key": "create_quotation",
+        "label": "Create Quotation",
+        "path": "/app/pm-surya-ghar/quotations"
+      }
+    ]
+  },
+  "meta": {
+    "version": 2,
+    "updated_at": "2026-03-29T00:00:00+00:00"
+  }
 }

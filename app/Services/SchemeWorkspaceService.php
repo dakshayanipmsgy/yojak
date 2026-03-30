@@ -145,7 +145,16 @@ class SchemeWorkspaceService
         $normalized = array_map('strtolower', $statuses);
         $count = 0;
         foreach ($items as $item) {
-            $status = strtolower((string) ($item['status'] ?? ''));
+            $status = (string) ($item['status'] ?? '');
+            if ($status === '') {
+                foreach ($item as $key => $value) {
+                    if (str_ends_with((string) $key, '_status')) {
+                        $status = (string) $value;
+                        break;
+                    }
+                }
+            }
+            $status = strtolower($status);
             if ($status !== '' && in_array($status, $normalized, true)) {
                 $count++;
             }

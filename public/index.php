@@ -19,6 +19,7 @@ use App\Services\SignupService;
 use App\Services\SchemeWorkspaceService;
 use App\Services\SubscriptionService;
 use App\Services\TenantStorageService;
+use App\Services\StorageDiagnosticsService;
 
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 $method = $_SERVER['REQUEST_METHOD'];
@@ -431,6 +432,26 @@ if (str_starts_with($path, '/admin')) {
         }
         $defaultsSummary = AdminService::defaultsSummary();
         render('Settings', 'settings', compact('settings', 'plans', 'csrfToken', 'defaultsSummary'), 'admin');
+    }
+
+    if ($path === '/admin/system-health') {
+        if ($method === 'POST') {
+            requireCsrfOrAbort();
+            if (($_POST['action'] ?? '') === 'repair') {
+                $platformSummary = StorageDiagnosticsService::platformSummary(true);
+                $tenantSummary = StorageDiagnosticsService::tenantSummary(true);
+                AuditService::log('storage_diagnostics_repair', 'admin', $admin['admin_id'], 'platform', 'storage', 'Admin triggered storage diagnostics repair.', [
+                    'platform_missing' => $platformSummary['missing_count'],
+                    'platform_invalid' => $platformSummary['invalid_count'],
+                    'tenant_missing' => $tenantSummary['missing_count'],
+                    'tenant_invalid' => $tenantSummary['invalid_count'],
+                ]);
+                redirectTo('/admin/system-health?ok=Diagnostics repair completed');
+            }
+        }
+        $platformSummary = StorageDiagnosticsService::platformSummary();
+        $tenantSummary = StorageDiagnosticsService::tenantSummary();
+        render('System Health', 'system_health', compact('csrfToken', 'platformSummary', 'tenantSummary'), 'admin');
     }
 }
 

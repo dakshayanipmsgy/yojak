@@ -12,6 +12,7 @@ Open: `http://localhost:8080`
 ### Quick URL checks
 - Public: `/`, `/homepage`, `/schemes`, `/scheme/pm-surya-ghar`, `/pricing`, `/signup`, `/signup/pm-surya-ghar`, `/login`
 - Admin: `/admin/login`, `/admin/dashboard`, `/admin/pending-signups`, `/admin/vendors`, `/admin/schemes`, `/admin/modules`, `/admin/plans`, `/admin/settings`
+- Admin diagnostics: `/admin/system-health` (validate + safe repair for missing storage contracts)
 - Vendor: `/app`, `/app/dashboard`, `/app/profile`, `/app/subscription`
 - PM Surya Ghar placeholders: `/app/pm-surya-ghar/leads` (and related module URLs)
 
@@ -45,6 +46,11 @@ The fallback only bridges hosting constraints and still routes through the canon
 - `app/Views` split by public/admin/vendor shells
 - `data/platform` for platform registries
 - `data/tenants` for tenant-isolated data and scheme folders
+
+## Storage and snapshot notes
+- Records are persisted in tenant scheme `records/*.json` with immutable-ish snapshots saved under `schemes/pm_surya_ghar/snapshots/*`.
+- Document artifacts are persisted under `schemes/pm_surya_ghar/documents/*`.
+- Use **Admin → System Health** to validate missing folders/files and run safe repairs without destructive resets.
 
 ## Future extension points
 - Add new schemes in `data/platform/schemes.json`

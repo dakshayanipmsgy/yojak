@@ -156,7 +156,7 @@ class PmSuryaGharOpsService
             $date = substr((string) ($item['created_at'] ?? ''), 0, 10);
             $index['by_date'][$date][] = $id;
         }
-        JsonStorage::write(self::indexPath($tenantId, $type), ['data' => $index, 'meta' => ['updated_at' => date('c')]]);
+        JsonStorage::write(self::indexPath($tenantId, $type), array_merge($index, ['meta' => ['version' => 1, 'updated_at' => date('c')]]));
     }
 
     public static function configPath(string $tenantId, string $configKey): string

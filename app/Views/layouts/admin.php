@@ -21,6 +21,7 @@
         <a href="/admin/modules">Modules</a>
         <a href="/admin/plans">Plans</a>
         <a href="/admin/settings">Settings</a>
+        <a href="/admin/system-health">System Health</a>
         <a href="/admin/logout">Logout</a>
     </div>
 </header>

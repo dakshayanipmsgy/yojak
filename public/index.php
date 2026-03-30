@@ -15,6 +15,7 @@ use App\Services\ProvisioningService;
 use App\Services\RegistryService;
 use App\Services\SessionService;
 use App\Services\SignupService;
+use App\Services\SchemeWorkspaceService;
 use App\Services\SubscriptionService;
 use App\Services\TenantStorageService;
 
@@ -105,7 +106,19 @@ if (preg_match('#^/signup/([a-z0-9_\-]+)$#', $path, $m)) {
 }
 
 if ($path === '/login' && $method === 'GET') { if (AuthService::vendor()) redirectTo('/app/dashboard'); render('Vendor Login', 'login', ['error' => $_GET['error'] ?? null, 'csrfToken' => $csrfToken]); }
-if ($path === '/login' && $method === 'POST') { requireCsrfOrAbort(); [$ok, $error] = AuthService::loginVendor((string) ($_POST['identifier'] ?? ''), (string) ($_POST['password'] ?? '')); if ($ok) redirectTo('/app/dashboard'); render('Vendor Login', 'login', compact('error', 'csrfToken')); }
+if ($path === '/login' && $method === 'POST') {
+    requireCsrfOrAbort();
+    [$ok, $error] = AuthService::loginVendor((string) ($_POST['identifier'] ?? ''), (string) ($_POST['password'] ?? ''));
+    if ($ok) {
+        $vendor = AuthService::vendor() ?? [];
+        $defaultLanding = '/app/dashboard';
+        if ($vendor !== [] && AccessService::hasSchemeAccess($vendor, 'pm_surya_ghar')) {
+            $defaultLanding = '/app/pm-surya-ghar/dashboard';
+        }
+        redirectTo($defaultLanding);
+    }
+    render('Vendor Login', 'login', compact('error', 'csrfToken'));
+}
 if ($path === '/admin/login' && $method === 'GET') { if (AuthService::admin()) redirectTo('/admin/dashboard'); render('Admin Login', 'login', ['admin' => true, 'csrfToken' => $csrfToken]); }
 if ($path === '/admin/login' && $method === 'POST') { requireCsrfOrAbort(); if (AuthService::loginAdmin((string) ($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''))) redirectTo('/admin/dashboard'); render('Admin Login', 'login', ['admin' => true, 'error' => 'Invalid credentials', 'csrfToken' => $csrfToken]); }
 
@@ -423,19 +436,68 @@ if (str_starts_with($path, '/admin')) {
 if (str_starts_with($path, '/app')) {
     $vendor = requireVendor();
     $subscription = RegistryService::getSubscriptionForVendor((string) $vendor['vendor_id']);
+    $tenantId = (string) ($vendor['tenant_id'] ?? '');
+    $enabledSchemes = TenantStorageService::getTenantEnabledSchemes($tenantId);
+    $platformDashboardCards = [
+        'enabled_schemes' => count($enabledSchemes),
+        'enabled_modules' => count((array) ($vendor['enabled_modules'] ?? [])),
+        'subscription_status' => (string) ($subscription['subscription_status'] ?? $vendor['subscription_status'] ?? 'unknown'),
+    ];
+    $schemeSummaries = [];
+    if (in_array('pm_surya_ghar', $enabledSchemes, true) && AccessService::hasSchemeAccess($vendor, 'pm_surya_ghar')) {
+        $pmWorkspace = SchemeWorkspaceService::pmSuryaGharMetadata($tenantId);
+        $schemeSummaries[] = [
+            'scheme_name' => (string) ($pmWorkspace['scheme']['scheme_name'] ?? 'PM Surya Ghar'),
+            'scheme_slug' => (string) ($pmWorkspace['scheme_slug'] ?? 'pm-surya-ghar'),
+            'description' => (string) ($pmWorkspace['scheme']['description'] ?? ''),
+            'dashboard_path' => '/app/pm-surya-ghar/dashboard',
+            'summary' => $pmWorkspace['dashboard_summary'],
+        ];
+    }
 
     if ($path === '/app' || $path === '/app/dashboard') {
-        render('Vendor Dashboard', 'dashboard', ['vendor' => $vendor, 'cards' => ['lead_count' => 0, 'draft_quotations' => 0, 'pending_agreements' => 0, 'open_complaints' => 0]], 'vendor');
+        render('Vendor Dashboard', 'dashboard', [
+            'vendor' => $vendor,
+            'subscription' => $subscription,
+            'cards' => $platformDashboardCards,
+            'schemeSummaries' => $schemeSummaries,
+            'pageContext' => ['context_type' => 'platform', 'title' => 'Vendor Dashboard', 'breadcrumbs' => [['label' => 'Dashboard']]],
+        ], 'vendor');
     }
-    if ($path === '/app/profile') render('Profile', 'profile', compact('vendor'), 'vendor');
-    if ($path === '/app/subscription') render('Subscription', 'subscription', compact('vendor', 'subscription'), 'vendor');
+    if ($path === '/app/profile') render('Profile', 'profile', ['vendor' => $vendor, 'pageContext' => ['context_type' => 'platform', 'title' => 'Company Profile', 'breadcrumbs' => [['label' => 'Dashboard', 'path' => '/app/dashboard'], ['label' => 'Profile']]]], 'vendor');
+    if ($path === '/app/subscription') render('Subscription', 'subscription', ['vendor' => $vendor, 'subscription' => $subscription, 'pageContext' => ['context_type' => 'platform', 'title' => 'Subscription', 'breadcrumbs' => [['label' => 'Dashboard', 'path' => '/app/dashboard'], ['label' => 'Subscription']]]], 'vendor');
 
-    $moduleRoutes = [
-        '/app/pm-surya-ghar/dashboard' => ['dashboard', 'PM Surya Ghar Dashboard'], '/app/pm-surya-ghar/leads' => ['leads', 'Leads'], '/app/pm-surya-ghar/customers' => ['customers', 'Customers'], '/app/pm-surya-ghar/quotations' => ['quotations', 'Quotations'], '/app/pm-surya-ghar/solar-finance' => ['solar-finance', 'Solar and Finance'], '/app/pm-surya-ghar/agreements' => ['agreements', 'Agreements'], '/app/pm-surya-ghar/payment-receipts' => ['payment-receipts', 'Payment Receipts'], '/app/pm-surya-ghar/invoices' => ['invoices', 'Invoices'], '/app/pm-surya-ghar/complaints' => ['complaints', 'Complaints'], '/app/pm-surya-ghar/templates-media' => ['templates-media', 'Templates & Media'], '/app/pm-surya-ghar/messaging-templates' => ['messaging-templates', 'Messaging Templates'], '/app/pm-surya-ghar/explainer-content' => ['explainer-content', 'Explainer Content'], '/app/pm-surya-ghar/rate-chart' => ['rate-chart', 'Rate Chart'], '/app/pm-surya-ghar/reports-exports' => ['reports-exports', 'Reports & Exports'], '/app/pm-surya-ghar/company-branding' => ['company-branding', 'Company Profile & Branding'], '/app/pm-surya-ghar/subscription-billing' => ['subscription-billing', 'Subscription & Billing'], '/app/pm-surya-ghar/scheme-settings' => ['scheme-settings', 'Scheme Settings'],
-    ];
-    if (isset($moduleRoutes[$path])) {
-        [$moduleKey, $label] = $moduleRoutes[$path]; $schemeKey = 'pm_surya_ghar'; requireModuleAccess($vendor, $schemeKey, $moduleKey);
-        render($label, 'module', ['vendor' => $vendor, 'moduleKey' => $moduleKey, 'schemeKey' => $schemeKey, 'title' => $label, 'description' => 'Module not implemented yet. This is a placeholder shell.'], 'vendor');
+    $pmWorkspace = SchemeWorkspaceService::pmSuryaGharMetadata($tenantId);
+    $routeContext = SchemeWorkspaceService::getRouteContext($pmWorkspace, $path);
+    if ($routeContext !== null) {
+        $schemeKey = 'pm_surya_ghar';
+        requireModuleAccess($vendor, $schemeKey, (string) ($routeContext['module_key'] ?? ''));
+        $pmNavigation = SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace);
+        $pageContext = [
+            'context_type' => 'scheme',
+            'scheme_name' => (string) ($pmWorkspace['scheme']['scheme_name'] ?? 'PM Surya Ghar'),
+            'title' => (string) ($routeContext['label'] ?? 'Module'),
+            'breadcrumbs' => (array) ($routeContext['breadcrumbs'] ?? []),
+        ];
+        if (($routeContext['module_key'] ?? '') === 'dashboard') {
+            render((string) ($routeContext['label'] ?? 'Scheme Dashboard'), 'scheme_dashboard', [
+                'vendor' => $vendor,
+                'subscription' => $subscription,
+                'workspace' => $pmWorkspace,
+                'navigation' => $pmNavigation,
+                'routeContext' => $routeContext,
+                'pageContext' => $pageContext,
+            ], 'vendor');
+        }
+        render((string) ($routeContext['label'] ?? 'Module'), 'module', [
+            'vendor' => $vendor,
+            'schemeKey' => $schemeKey,
+            'workspace' => $pmWorkspace,
+            'navigation' => $pmNavigation,
+            'routeContext' => $routeContext,
+            'pageContext' => $pageContext,
+            'description' => (string) ($routeContext['description'] ?? 'Module shell is ready for implementation.'),
+        ], 'vendor');
     }
 }
 

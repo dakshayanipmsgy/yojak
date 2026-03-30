@@ -1,14 +1,52 @@
 {
     "data": {
+        "scheme_id": "SCH-0001",
         "scheme_key": "pm_surya_ghar",
         "scheme_name": "PM Surya Ghar",
-        "enabled_flag": true,
+        "public_title": "PM Surya Ghar Vendor Platform",
+        "description": "Operational workspace for PM Surya Ghar vendors.",
+        "active_flag": true,
+        "public_visible": true,
+        "signup_enabled": true,
+        "workflow_definition_ref": "defaults/schemes/pm_surya_ghar/workflow_definition.json",
+        "module_registry_keys": [
+            "dashboard",
+            "leads",
+            "customers",
+            "quotations",
+            "solar-finance",
+            "agreements",
+            "payment-receipts",
+            "invoices",
+            "complaints",
+            "templates-media",
+            "messaging-templates",
+            "explainer-content",
+            "rate-chart",
+            "reports-exports",
+            "company-branding",
+            "subscription-billing",
+            "scheme-settings"
+        ],
+        "default_settings_ref": "defaults/schemes/pm_surya_ghar/scheme_defaults.json",
+        "content_refs": [
+            "config/templates.json",
+            "config/message_templates.json",
+            "config/explainer_content.json",
+            "config/content_blocks.json"
+        ],
+        "document_refs": [
+            "config/document_rules.json",
+            "records/agreements.json",
+            "records/receipts.json",
+            "records/invoices.json"
+        ],
         "activated_at": "2026-03-29T21:22:36+00:00",
         "last_updated_at": "2026-03-29T21:22:36+00:00",
-        "storage_schema_version": 1
+        "storage_schema_version": 2
     },
     "meta": {
-        "version": 1,
-        "updated_at": ""
+        "version": 2,
+        "updated_at": "2026-03-29T00:00:00+00:00"
     }
 }

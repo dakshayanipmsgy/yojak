@@ -12,14 +12,188 @@
             "invoice",
             "complaint_support"
         ],
-        "allowed_transitions": {
-            "lead": [
-                "engagement"
-            ]
+        "stages": [
+            {
+                "key": "lead",
+                "label": "Lead",
+                "order": 1,
+                "category": "pre-sales",
+                "description": "Prospect intake before conversion into deeper advisory flow.",
+                "primary_modules": ["leads"],
+                "allowed_next_stages": ["engagement"],
+                "dashboard_metric": "leads_count",
+                "quick_actions": ["add_lead", "view_leads"],
+                "milestone_type": "entry"
+            },
+            {
+                "key": "engagement",
+                "label": "Engagement",
+                "order": 2,
+                "category": "qualification",
+                "description": "Contact, callbacks, and first-response tracking.",
+                "primary_modules": ["leads"],
+                "allowed_next_stages": ["detailed_information_shared", "solar_finance"],
+                "dashboard_metric": "leads_count",
+                "quick_actions": ["view_leads"],
+                "milestone_type": "activity"
+            },
+            {
+                "key": "detailed_information_shared",
+                "label": "Detailed information shared",
+                "order": 3,
+                "category": "qualification",
+                "description": "Scheme explainers and messaging templates shared with prospect/customer.",
+                "primary_modules": ["leads", "messaging-templates", "explainer-content"],
+                "allowed_next_stages": ["solar_finance", "quotation"],
+                "dashboard_metric": "customers_count",
+                "quick_actions": ["open_explainer", "open_messaging_templates"],
+                "milestone_type": "handoff"
+            },
+            {
+                "key": "solar_finance",
+                "label": "Solar and Finance",
+                "order": 4,
+                "category": "solutioning",
+                "description": "Feasibility and financing exploration based on scheme assumptions.",
+                "primary_modules": ["solar-finance", "rate-chart", "explainer-content"],
+                "allowed_next_stages": ["quotation"],
+                "dashboard_metric": "draft_quotations_count",
+                "quick_actions": ["open_solar_finance", "open_rate_chart"],
+                "milestone_type": "solution"
+            },
+            {
+                "key": "quotation",
+                "label": "Quotation",
+                "order": 5,
+                "category": "proposal",
+                "description": "Quotation drafting, revision, and sharing.",
+                "primary_modules": ["quotations", "templates-media", "messaging-templates", "rate-chart"],
+                "allowed_next_stages": ["quotation_accepted", "agreement"],
+                "dashboard_metric": "draft_quotations_count",
+                "quick_actions": ["create_quotation", "view_quotations"],
+                "milestone_type": "commercial-draft"
+            },
+            {
+                "key": "quotation_accepted",
+                "label": "Quotation accepted",
+                "order": 6,
+                "category": "commercial",
+                "description": "Customer has accepted proposal and flow moves to formal documents.",
+                "primary_modules": ["quotations", "agreements"],
+                "allowed_next_stages": ["agreement"],
+                "dashboard_metric": "accepted_quotations_count",
+                "quick_actions": ["view_agreements"],
+                "milestone_type": "approval"
+            },
+            {
+                "key": "agreement",
+                "label": "Agreement",
+                "order": 7,
+                "category": "commercial",
+                "description": "Agreement generation and customer confirmation.",
+                "primary_modules": ["agreements", "company-branding", "templates-media"],
+                "allowed_next_stages": ["payment_receipt", "invoice"],
+                "dashboard_metric": "pending_agreements_count",
+                "quick_actions": ["view_agreements"],
+                "milestone_type": "contract"
+            },
+            {
+                "key": "payment_receipt",
+                "label": "Payment Receipt",
+                "order": 8,
+                "category": "commercial",
+                "description": "Payment acknowledgement for customer transactions.",
+                "primary_modules": ["payment-receipts"],
+                "allowed_next_stages": ["invoice"],
+                "dashboard_metric": "receipts_count",
+                "quick_actions": ["open_receipts"],
+                "milestone_type": "finance-record"
+            },
+            {
+                "key": "invoice",
+                "label": "Invoice",
+                "order": 9,
+                "category": "commercial",
+                "description": "Invoice generation and tracking.",
+                "primary_modules": ["invoices"],
+                "allowed_next_stages": ["complaint_support"],
+                "dashboard_metric": "invoices_count",
+                "quick_actions": ["open_invoices"],
+                "milestone_type": "finance-document"
+            },
+            {
+                "key": "complaint_support",
+                "label": "Complaint support",
+                "order": 10,
+                "category": "support",
+                "description": "Post-sale issue handling and customer support.",
+                "primary_modules": ["complaints"],
+                "allowed_next_stages": [],
+                "dashboard_metric": "open_complaints_count",
+                "quick_actions": ["view_complaints"],
+                "milestone_type": "support"
+            }
+        ],
+        "module_groups": [
+            {"group_key": "core_workspace", "group_label": "Core workspace overview", "module_keys": ["dashboard", "company-branding", "subscription-billing", "scheme-settings"]},
+            {"group_key": "pipeline", "group_label": "Pipeline", "module_keys": ["leads", "customers"]},
+            {"group_key": "solutioning", "group_label": "Solutioning", "module_keys": ["solar-finance", "quotations"]},
+            {"group_key": "commercial", "group_label": "Commercial", "module_keys": ["agreements", "payment-receipts", "invoices"]},
+            {"group_key": "support", "group_label": "Support", "module_keys": ["complaints"]},
+            {"group_key": "content_configuration", "group_label": "Content & Configuration", "module_keys": ["templates-media", "messaging-templates", "explainer-content", "rate-chart", "scheme-settings"]},
+            {"group_key": "reporting", "group_label": "Reporting", "module_keys": ["reports-exports"]}
+        ],
+        "dashboard_quick_actions": [
+            {"key": "add_lead", "label": "Add Lead", "path": "/app/pm-surya-ghar/leads"},
+            {"key": "view_leads", "label": "View Leads", "path": "/app/pm-surya-ghar/leads"},
+            {"key": "open_solar_finance", "label": "Open Solar & Finance", "path": "/app/pm-surya-ghar/solar-finance"},
+            {"key": "create_quotation", "label": "Create Quotation", "path": "/app/pm-surya-ghar/quotations"},
+            {"key": "view_agreements", "label": "View Agreements", "path": "/app/pm-surya-ghar/agreements"},
+            {"key": "view_complaints", "label": "View Complaints", "path": "/app/pm-surya-ghar/complaints"},
+            {"key": "open_rate_chart", "label": "Open Rate Chart", "path": "/app/pm-surya-ghar/rate-chart"},
+            {"key": "open_messaging_templates", "label": "Open Messaging Templates", "path": "/app/pm-surya-ghar/messaging-templates"}
+        ],
+        "route_metadata": {
+            "dashboard": {"path": "/app/pm-surya-ghar/dashboard", "module_key": "dashboard", "label": "Dashboard", "nav_group": "core_workspace", "nav_group_label": "Core workspace overview", "nav_order": 1, "requires_entitlement": true, "core": true, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar"}, {"label": "Dashboard"}], "description": "Scheme control center with workflow progress and quick actions."},
+            "leads": {"path": "/app/pm-surya-ghar/leads", "module_key": "leads", "label": "Leads", "nav_group": "pipeline", "nav_group_label": "Pipeline", "nav_order": 10, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Pipeline"}, {"label": "Leads"}], "description": "Prospect intake and early follow-up management."},
+            "customers": {"path": "/app/pm-surya-ghar/customers", "module_key": "customers", "label": "Customers", "nav_group": "pipeline", "nav_group_label": "Pipeline", "nav_order": 20, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Pipeline"}, {"label": "Customers"}], "description": "Customer master records and downstream document linkage."},
+            "solar-finance": {"path": "/app/pm-surya-ghar/solar-finance", "module_key": "solar-finance", "label": "Solar & Finance", "nav_group": "solutioning", "nav_group_label": "Solutioning", "nav_order": 30, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Solutioning"}, {"label": "Solar & Finance"}], "description": "Feasibility and funding exploration shell."},
+            "quotations": {"path": "/app/pm-surya-ghar/quotations", "module_key": "quotations", "label": "Quotations", "nav_group": "solutioning", "nav_group_label": "Solutioning", "nav_order": 40, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Solutioning"}, {"label": "Quotations"}], "description": "Proposal drafting and revision workspace shell."},
+            "agreements": {"path": "/app/pm-surya-ghar/agreements", "module_key": "agreements", "label": "Agreements", "nav_group": "commercial", "nav_group_label": "Commercial", "nav_order": 50, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Commercial"}, {"label": "Agreements"}], "description": "Formal agreement document lifecycle shell."},
+            "payment-receipts": {"path": "/app/pm-surya-ghar/payment-receipts", "module_key": "payment-receipts", "label": "Payment Receipts", "nav_group": "commercial", "nav_group_label": "Commercial", "nav_order": 60, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Commercial"}, {"label": "Payment Receipts"}], "description": "Receipt acknowledgements linked to commercial flow."},
+            "invoices": {"path": "/app/pm-surya-ghar/invoices", "module_key": "invoices", "label": "Invoices", "nav_group": "commercial", "nav_group_label": "Commercial", "nav_order": 70, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Commercial"}, {"label": "Invoices"}], "description": "Invoice generation and tracking shell."},
+            "complaints": {"path": "/app/pm-surya-ghar/complaints", "module_key": "complaints", "label": "Complaints", "nav_group": "support", "nav_group_label": "Support", "nav_order": 80, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Support"}, {"label": "Complaints"}], "description": "After-sales service and complaint tracking shell."},
+            "templates-media": {"path": "/app/pm-surya-ghar/templates-media", "module_key": "templates-media", "label": "Templates & Media", "nav_group": "content_configuration", "nav_group_label": "Content & Configuration", "nav_order": 90, "requires_entitlement": true, "core": false, "dashboard_visible": false, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Content & Configuration"}, {"label": "Templates & Media"}], "description": "Reusable template and media asset shell."},
+            "messaging-templates": {"path": "/app/pm-surya-ghar/messaging-templates", "module_key": "messaging-templates", "label": "Messaging Templates", "nav_group": "content_configuration", "nav_group_label": "Content & Configuration", "nav_order": 100, "requires_entitlement": true, "core": false, "dashboard_visible": false, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Content & Configuration"}, {"label": "Messaging Templates"}], "description": "WhatsApp/email templates shell."},
+            "explainer-content": {"path": "/app/pm-surya-ghar/explainer-content", "module_key": "explainer-content", "label": "Explainer Content", "nav_group": "content_configuration", "nav_group_label": "Content & Configuration", "nav_order": 110, "requires_entitlement": true, "core": false, "dashboard_visible": false, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Content & Configuration"}, {"label": "Explainer Content"}], "description": "Customer-facing scheme explanation shell."},
+            "rate-chart": {"path": "/app/pm-surya-ghar/rate-chart", "module_key": "rate-chart", "label": "Rate Chart", "nav_group": "content_configuration", "nav_group_label": "Content & Configuration", "nav_order": 120, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Content & Configuration"}, {"label": "Rate Chart"}], "description": "Pricing source configuration shell."},
+            "reports-exports": {"path": "/app/pm-surya-ghar/reports-exports", "module_key": "reports-exports", "label": "Reports & Exports", "nav_group": "reporting", "nav_group_label": "Reporting", "nav_order": 130, "requires_entitlement": true, "core": false, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Reporting"}, {"label": "Reports & Exports"}], "description": "Operational visibility and export shell."},
+            "company-branding": {"path": "/app/pm-surya-ghar/company-branding", "module_key": "company-branding", "label": "Company Profile & Branding", "nav_group": "core_workspace", "nav_group_label": "Core workspace overview", "nav_order": 140, "requires_entitlement": true, "core": true, "dashboard_visible": false, "quick_link_eligible": false, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Core workspace overview"}, {"label": "Company Profile & Branding"}], "description": "Scheme presentation identity shell."},
+            "subscription-billing": {"path": "/app/pm-surya-ghar/subscription-billing", "module_key": "subscription-billing", "label": "Subscription & Billing", "nav_group": "core_workspace", "nav_group_label": "Core workspace overview", "nav_order": 150, "requires_entitlement": true, "core": true, "dashboard_visible": false, "quick_link_eligible": false, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Core workspace overview"}, {"label": "Subscription & Billing"}], "description": "Billing context for scheme usage shell."},
+            "scheme-settings": {"path": "/app/pm-surya-ghar/scheme-settings", "module_key": "scheme-settings", "label": "Scheme Settings", "nav_group": "content_configuration", "nav_group_label": "Content & Configuration", "nav_order": 160, "requires_entitlement": true, "core": true, "dashboard_visible": true, "quick_link_eligible": true, "breadcrumbs": [{"label": "PM Surya Ghar", "path": "/app/pm-surya-ghar/dashboard"}, {"label": "Content & Configuration"}, {"label": "Scheme Settings"}], "description": "PM Surya Ghar assumptions, toggles, and defaults shell."}
+        },
+        "module_metadata": {
+            "leads": {"module_key": "leads", "module_label": "Leads", "nav_group": "Pipeline", "workflow_stages": ["lead", "engagement", "detailed_information_shared"], "upstream_modules": [], "downstream_modules": ["customers", "solar-finance", "quotations"], "short_purpose": "Prospect intake, follow-up tracking, and early engagement.", "future_actions": "Implement lead CRUD, activity timelines, and conversion mapping."},
+            "customers": {"module_key": "customers", "module_label": "Customers", "nav_group": "Pipeline", "workflow_stages": ["engagement", "detailed_information_shared", "quotation"], "upstream_modules": ["leads"], "downstream_modules": ["solar-finance", "quotations", "agreements", "invoices"], "short_purpose": "Customer master records and cross-document linkage.", "future_actions": "Implement customer CRUD and relationship graph with scheme documents."},
+            "solar-finance": {"module_key": "solar-finance", "module_label": "Solar & Finance", "nav_group": "Solutioning", "workflow_stages": ["solar_finance"], "upstream_modules": ["leads", "customers", "rate-chart"], "downstream_modules": ["quotations"], "short_purpose": "Feasibility, funding comparison, and solution modelling.", "future_actions": "Implement calculators and persisted scenario snapshots."},
+            "quotations": {"module_key": "quotations", "module_label": "Quotations", "nav_group": "Solutioning", "workflow_stages": ["quotation", "quotation_accepted"], "upstream_modules": ["leads", "customers", "solar-finance", "rate-chart"], "downstream_modules": ["agreements", "messaging-templates"], "short_purpose": "Structured proposal generation and revision flow.", "future_actions": "Implement quote builder, revisions, and sharing links."},
+            "agreements": {"module_key": "agreements", "module_label": "Agreements", "nav_group": "Commercial", "workflow_stages": ["agreement"], "upstream_modules": ["quotations", "customers"], "downstream_modules": ["payment-receipts", "invoices"], "short_purpose": "Formal commercial agreement generation.", "future_actions": "Implement agreement generation and signing status."},
+            "payment-receipts": {"module_key": "payment-receipts", "module_label": "Payment Receipts", "nav_group": "Commercial", "workflow_stages": ["payment_receipt"], "upstream_modules": ["agreements", "customers"], "downstream_modules": ["invoices"], "short_purpose": "Payment acknowledgement and receipt history.", "future_actions": "Implement receipt issuance and document snapshots."},
+            "invoices": {"module_key": "invoices", "module_label": "Invoices", "nav_group": "Commercial", "workflow_stages": ["invoice"], "upstream_modules": ["agreements", "payment-receipts"], "downstream_modules": ["reports-exports"], "short_purpose": "Invoice generation linked to customer journey.", "future_actions": "Implement invoice lifecycle and export formats."},
+            "complaints": {"module_key": "complaints", "module_label": "Complaints", "nav_group": "Support", "workflow_stages": ["complaint_support"], "upstream_modules": ["invoices", "customers"], "downstream_modules": ["reports-exports"], "short_purpose": "Post-sale issue and support handling.", "future_actions": "Implement SLA-aware support workflow."},
+            "templates-media": {"module_key": "templates-media", "module_label": "Templates & Media", "nav_group": "Content & Configuration", "workflow_stages": ["detailed_information_shared", "quotation", "agreement"], "upstream_modules": ["scheme-settings"], "downstream_modules": ["quotations", "agreements"], "short_purpose": "Reusable quotation/document blocks and media assets.", "future_actions": "Implement template editors and asset management."},
+            "messaging-templates": {"module_key": "messaging-templates", "module_label": "Messaging Templates", "nav_group": "Content & Configuration", "workflow_stages": ["detailed_information_shared", "quotation"], "upstream_modules": ["scheme-settings"], "downstream_modules": ["leads", "quotations"], "short_purpose": "Reusable WhatsApp/email templates with placeholders.", "future_actions": "Implement variable-aware message composer."},
+            "explainer-content": {"module_key": "explainer-content", "module_label": "Explainer Content", "nav_group": "Content & Configuration", "workflow_stages": ["detailed_information_shared", "solar_finance"], "upstream_modules": ["scheme-settings"], "downstream_modules": ["leads", "solar-finance"], "short_purpose": "Customer-facing scheme explanation blocks.", "future_actions": "Implement content block management and versioning."},
+            "rate-chart": {"module_key": "rate-chart", "module_label": "Rate Chart", "nav_group": "Content & Configuration", "workflow_stages": ["solar_finance", "quotation"], "upstream_modules": ["scheme-settings"], "downstream_modules": ["solar-finance", "quotations"], "short_purpose": "Vendor pricing source for PM Surya Ghar offerings.", "future_actions": "Implement rate-card revision tracking."},
+            "reports-exports": {"module_key": "reports-exports", "module_label": "Reports & Exports", "nav_group": "Reporting", "workflow_stages": ["lead", "quotation", "invoice", "complaint_support"], "upstream_modules": ["leads", "quotations", "invoices", "complaints"], "downstream_modules": [], "short_purpose": "Operational visibility and data extraction.", "future_actions": "Implement saved reports and exports."},
+            "scheme-settings": {"module_key": "scheme-settings", "module_label": "Scheme Settings", "nav_group": "Content & Configuration", "workflow_stages": ["lead", "solar_finance", "quotation"], "upstream_modules": [], "downstream_modules": ["rate-chart", "templates-media", "explainer-content", "messaging-templates"], "short_purpose": "PM Surya Ghar assumptions and workflow toggles.", "future_actions": "Implement structured settings editors with audit snapshots."},
+            "company-branding": {"module_key": "company-branding", "module_label": "Company Profile & Branding", "nav_group": "Core workspace overview", "workflow_stages": ["agreement"], "upstream_modules": ["profile"], "downstream_modules": ["agreements", "templates-media"], "short_purpose": "Vendor identity and branding context for documents.", "future_actions": "Implement branding profile bridge for scheme documents."},
+            "subscription-billing": {"module_key": "subscription-billing", "module_label": "Subscription & Billing", "nav_group": "Core workspace overview", "workflow_stages": [], "upstream_modules": ["subscription"], "downstream_modules": ["all"], "short_purpose": "Subscription snapshot in scheme context.", "future_actions": "Implement scheme-level usage metering summaries."},
+            "dashboard": {"module_key": "dashboard", "module_label": "Dashboard", "nav_group": "Core workspace overview", "workflow_stages": ["lead", "engagement", "detailed_information_shared", "solar_finance", "quotation", "quotation_accepted", "agreement", "payment_receipt", "invoice", "complaint_support"], "upstream_modules": [], "downstream_modules": ["all"], "short_purpose": "Scheme control center and journey summary.", "future_actions": "Add live KPIs and alerts."}
         }
     },
     "meta": {
-        "version": 1,
-        "updated_at": ""
+        "version": 2,
+        "updated_at": "2026-03-29T00:00:00+00:00"
     }
 }

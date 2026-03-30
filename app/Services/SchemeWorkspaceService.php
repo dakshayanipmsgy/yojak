@@ -24,6 +24,8 @@ class SchemeWorkspaceService
             'document_rules' => self::hasConfigData(TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'document_rules')),
             'settings_loaded' => $settings !== [],
             'workflow_loaded' => ($workflowRuntime['data']['stages'] ?? []) !== [],
+            'branding' => TenantStorageService::getTenantBranding($tenantId) !== [],
+            'profile' => TenantStorageService::getTenantProfile($tenantId) !== [],
         ];
 
         $records = [
@@ -117,12 +119,19 @@ class SchemeWorkspaceService
 
     private static function hasConfigData(array $payload): bool
     {
-        $data = $payload['data'] ?? null;
-        if (is_array($data)) {
-            return $data !== [];
+        if ($payload === []) {
+            return false;
+        }
+        foreach ($payload as $value) {
+            if (is_array($value) && $value !== []) {
+                return true;
+            }
+            if (!is_array($value) && $value !== '' && $value !== null) {
+                return true;
+            }
         }
 
-        return !empty($data);
+        return false;
     }
 
 

@@ -105,11 +105,11 @@ class BootstrapService
             JsonStorage::ensureFile($base . '/config/' . $name . '.json', ['data' => $data, 'meta' => ['version' => 1, 'updated_at' => '']]);
         }
 
-        foreach (['leads','customers','quotations','agreements','receipts','invoices','complaints','reports'] as $recordType) {
+        foreach (['leads','customers','solar_finance','quotations','agreements','receipts','invoices','complaints','reports'] as $recordType) {
             JsonStorage::ensureFile($base . '/records/' . $recordType . '.json', ['items' => [], 'meta' => ['version' => 1, 'updated_at' => '', 'next_hint' => null]]);
         }
 
-        foreach (['lead','customer','quotation','agreement','receipt','invoice','complaint'] as $idx) {
+        foreach (['lead','customer','solar_finance','quotation','agreement','receipt','invoice','complaint','report'] as $idx) {
             JsonStorage::ensureFile($base . '/indexes/' . $idx . '_index.json', ['by_id' => [], 'by_status' => [], 'by_date' => [], 'meta' => ['version' => 1, 'updated_at' => '']]);
         }
 

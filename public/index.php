@@ -487,6 +487,12 @@ if (str_starts_with($path, '/app')) {
             'invoices' => '/invoices',
             'complaints' => '/complaints',
             'reports-exports' => '/reports-exports',
+            'templates-media' => '/templates-media',
+            'messaging-templates' => '/messaging-templates',
+            'explainer-content' => '/explainer-content',
+            'rate-chart' => '/rate-chart',
+            'scheme-settings' => '/scheme-settings',
+            'company-branding' => '/company-branding',
         ];
         foreach ($moduleMatch as $mod => $prefix) {
             if (str_starts_with($subPath, $prefix)) {
@@ -535,6 +541,265 @@ if (str_starts_with($path, '/app')) {
 ";
             exit;
         }
+
+
+        if (str_starts_with($subPath, '/templates-media')) {
+            $templates = PmSuryaGharOpsService::effectiveConfig($tenantId, 'templates');
+            $contentBlocks = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'content_blocks');
+            $annexures = (array) ($contentBlocks['annexure_blocks'] ?? []);
+            $media = (array) ($contentBlocks['media_assets'] ?? []);
+            if ($method === 'POST') {
+                $action = (string) ($_POST['action'] ?? 'save_template_set');
+                if ($action === 'save_template_set') {
+                    $setKey = trim((string) ($_POST['template_set_key'] ?? ''));
+                    if ($setKey === '') {
+                        $setKey = strtolower(preg_replace('/[^a-z0-9]+/i', '_', (string) ($_POST['template_set_name'] ?? 'template_set')) ?: 'template_set');
+                    }
+                    $templates['template_sets'][$setKey] = [
+                        'template_set_id' => (string) ($_POST['template_set_id'] ?? strtoupper(substr($setKey, 0, 10))),
+                        'template_set_key' => $setKey,
+                        'template_set_name' => (string) ($_POST['template_set_name'] ?? $setKey),
+                        'scheme_key' => $schemeKey,
+                        'active_flag' => isset($_POST['active_flag']),
+                        'description' => (string) ($_POST['description'] ?? ''),
+                        'cover_note' => (string) ($_POST['cover_note'] ?? ''),
+                        'annexure_blocks' => array_values(array_filter(array_map('trim', explode(',', (string) ($_POST['annexure_keys'] ?? ''))))),
+                        'subsidy_info' => (string) ($_POST['subsidy_info'] ?? ''),
+                        'completion_milestones' => array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['completion_milestones'] ?? '')) ?: []))),
+                        'next_steps' => array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['next_steps'] ?? '')) ?: []))),
+                        'payment_terms' => (string) ($_POST['payment_terms'] ?? ''),
+                        'warranty' => (string) ($_POST['warranty'] ?? ''),
+                        'system_type_explainer' => (string) ($_POST['system_type_explainer'] ?? ''),
+                        'transportation' => (string) ($_POST['transportation'] ?? ''),
+                        'terms_conditions' => (string) ($_POST['terms_conditions'] ?? ''),
+                        'media_references' => array_values(array_filter(array_map('trim', explode(',', (string) ($_POST['media_references'] ?? ''))))),
+                        'updated_at' => date('c'),
+                        'created_at' => (string) ($_POST['created_at'] ?? date('c')),
+                    ];
+                    if (isset($_POST['default_template_set'])) {
+                        $templates['default_template_set_key'] = $setKey;
+                    }
+                    PmSuryaGharOpsService::saveConfig($tenantId, 'templates', $templates);
+                    $pageData['notice'] = 'Template set saved.';
+                }
+                if ($action === 'save_annexure') {
+                    $blockKey = trim((string) ($_POST['block_key'] ?? ''));
+                    if ($blockKey === '') {
+                        $blockKey = strtolower(preg_replace('/[^a-z0-9]+/i', '_', (string) ($_POST['block_title'] ?? 'annexure')) ?: 'annexure');
+                    }
+                    $annexures[$blockKey] = [
+                        'block_id' => (string) ($_POST['block_id'] ?? strtoupper(substr($blockKey, 0, 12))),
+                        'block_key' => $blockKey,
+                        'block_title' => (string) ($_POST['block_title'] ?? ''),
+                        'block_body' => (string) ($_POST['block_body'] ?? ''),
+                        'active_flag' => isset($_POST['active_flag']),
+                        'sort_order' => (int) ($_POST['sort_order'] ?? 0),
+                        'tags' => array_values(array_filter(array_map('trim', explode(',', (string) ($_POST['tags'] ?? ''))))),
+                        'updated_at' => date('c'),
+                        'created_at' => (string) ($_POST['created_at'] ?? date('c')),
+                    ];
+                    $contentBlocks['annexure_blocks'] = $annexures;
+                    RegistryService::putConfigData(TenantStorageService::getTenantSchemePath($tenantId, $schemeKey) . '/config/content_blocks.json', $contentBlocks);
+                    $pageData['notice'] = 'Annexure block saved.';
+                }
+                if ($action === 'upload_media' && isset($_FILES['media_file']['tmp_name']) && is_uploaded_file($_FILES['media_file']['tmp_name'])) {
+                    $orig = (string) ($_FILES['media_file']['name'] ?? 'file');
+                    $safe = strtolower(preg_replace('/[^a-z0-9\.\-_]+/i', '_', $orig) ?: 'asset.bin');
+                    $targetDir = TenantStorageService::getTenantSchemePath($tenantId, $schemeKey) . '/uploads/media';
+                    \App\Core\JsonStorage::ensureDir($targetDir);
+                    $target = date('Ymd_His') . '_' . $safe;
+                    if (move_uploaded_file((string) $_FILES['media_file']['tmp_name'], $targetDir . '/' . $target)) {
+                        $media[$target] = ['asset_key' => $target, 'file_name' => $orig, 'relative_path' => 'uploads/media/' . $target, 'active_flag' => true, 'created_at' => date('c')];
+                        $contentBlocks['media_assets'] = $media;
+                        RegistryService::putConfigData(TenantStorageService::getTenantSchemePath($tenantId, $schemeKey) . '/config/content_blocks.json', $contentBlocks);
+                        $pageData['notice'] = 'Media uploaded.';
+                    }
+                }
+            }
+            $pageData['templates'] = $templates;
+            $pageData['annexures'] = $annexures;
+            $pageData['media_assets'] = $media;
+            render('Templates & Media', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Templates & Media'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Templates & Media'], 'page' => 'templates_media', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/messaging-templates')) {
+            $messageTemplates = PmSuryaGharOpsService::effectiveConfig($tenantId, 'message_templates');
+            if ($method === 'POST') {
+                $messageTemplates = [
+                    'whatsapp_intro' => (string) ($_POST['whatsapp_intro'] ?? ''),
+                    'email_intro_subject' => (string) ($_POST['email_intro_subject'] ?? ''),
+                    'email_intro_body' => (string) ($_POST['email_intro_body'] ?? ''),
+                    'whatsapp_details' => (string) ($_POST['whatsapp_details'] ?? ''),
+                    'email_details_subject' => (string) ($_POST['email_details_subject'] ?? ''),
+                    'email_details_body' => (string) ($_POST['email_details_body'] ?? ''),
+                    'placeholders' => array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['placeholders'] ?? '')) ?: []))),
+                    'updated_at' => date('c'),
+                ];
+                PmSuryaGharOpsService::saveConfig($tenantId, 'message_templates', $messageTemplates);
+                $pageData['notice'] = 'Messaging templates saved.';
+            }
+            $previewValues = ['customer_name' => 'Riya Sharma', 'vendor_name' => (string) ($vendor['owner_name'] ?? 'Vendor'), 'company_name' => (string) ($vendor['company_name'] ?? ''), 'quotation_link' => 'https://yojak.local/q/QUO-0001', 'scheme_name' => 'PM Surya Ghar', 'city' => 'Indore', 'mobile' => '9876543210'];
+            $pageData['templates'] = $messageTemplates;
+            $pageData['placeholder_catalog'] = (array) ($messageTemplates['placeholders'] ?? ['{{customer_name}}', '{{vendor_name}}', '{{company_name}}', '{{quotation_link}}', '{{scheme_name}}', '{{city}}', '{{mobile}}']);
+            $pageData['preview'] = [
+                'whatsapp_intro' => PmSuryaGharOpsService::renderPlaceholders((string) ($messageTemplates['whatsapp_intro'] ?? ''), $previewValues),
+                'whatsapp_details' => PmSuryaGharOpsService::renderPlaceholders((string) ($messageTemplates['whatsapp_details'] ?? ''), $previewValues),
+                'email_intro_subject' => PmSuryaGharOpsService::renderPlaceholders((string) ($messageTemplates['email_intro_subject'] ?? ''), $previewValues),
+                'email_intro_body' => PmSuryaGharOpsService::renderPlaceholders((string) ($messageTemplates['email_intro_body'] ?? ''), $previewValues),
+                'email_details_subject' => PmSuryaGharOpsService::renderPlaceholders((string) ($messageTemplates['email_details_subject'] ?? ''), $previewValues),
+                'email_details_body' => PmSuryaGharOpsService::renderPlaceholders((string) ($messageTemplates['email_details_body'] ?? ''), $previewValues),
+            ];
+            render('Messaging Templates', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Messaging Templates'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Messaging Templates'], 'page' => 'messaging_templates', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/explainer-content')) {
+            $explainer = PmSuryaGharOpsService::effectiveConfig($tenantId, 'explainer_content');
+            if ($method === 'POST') {
+                $faqRows = array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['faqs_text'] ?? '')) ?: [])));
+                $benefitRows = array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['benefits_text'] ?? '')) ?: [])));
+                $explainer = [
+                    'page_title' => (string) ($_POST['page_title'] ?? ''),
+                    'hero_intro' => (string) ($_POST['hero_intro'] ?? ''),
+                    'scheme_explanation' => (string) ($_POST['scheme_explanation'] ?? ''),
+                    'eligibility' => array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['eligibility_text'] ?? '')) ?: []))),
+                    'on_grid_block' => (string) ($_POST['on_grid_block'] ?? ''),
+                    'hybrid_block' => (string) ($_POST['hybrid_block'] ?? ''),
+                    'faqs' => array_map(static fn(string $row, int $i): array => ['question' => explode('|', $row)[0] ?? '', 'answer' => explode('|', $row)[1] ?? '', 'sort_order' => $i + 1, 'active_flag' => true], $faqRows, array_keys($faqRows)),
+                    'benefits' => array_map(static fn(string $row, int $i): array => ['title' => explode('|', $row)[0] ?? '', 'description' => explode('|', $row)[1] ?? '', 'sort_order' => $i + 1], $benefitRows, array_keys($benefitRows)),
+                    'expectations' => array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['expectations_text'] ?? '')) ?: []))),
+                    'cta' => (string) ($_POST['cta'] ?? ''),
+                    'media_urls' => array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', (string) ($_POST['media_urls'] ?? '')) ?: []))),
+                    'updated_at' => date('c'),
+                ];
+                PmSuryaGharOpsService::saveConfig($tenantId, 'explainer_content', $explainer);
+                $pageData['notice'] = 'Explainer content saved.';
+            }
+            $pageData['explainer'] = $explainer;
+            render('Explainer Content', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Explainer Content'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Explainer Content'], 'page' => 'explainer_content', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/rate-chart')) {
+            $rateChart = PmSuryaGharOpsService::effectiveConfig($tenantId, 'rate_chart');
+            if ($method === 'POST') {
+                $parseRates = static function (string $txt): array {
+                    $rows = array_values(array_filter(array_map('trim', preg_split('/
+|
+|
+/', $txt) ?: [])));
+                    $out = [];
+                    foreach ($rows as $row) {
+                        [$slab, $rate, $notes] = array_pad(array_map('trim', explode('|', $row)), 3, '');
+                        $out[] = ['slab_label' => $slab, 'rate' => (float) $rate, 'notes' => $notes];
+                    }
+                    return $out;
+                };
+                $rateChart = [
+                    'effective_from' => (string) ($_POST['effective_from'] ?? date('Y-m-d')),
+                    'notes' => (string) ($_POST['notes'] ?? ''),
+                    'on_grid_rates' => $parseRates((string) ($_POST['on_grid_rates_text'] ?? '')),
+                    'hybrid_rates' => $parseRates((string) ($_POST['hybrid_rates_text'] ?? '')),
+                    'self_funded_price' => max(0, (float) ($_POST['self_funded_price'] ?? 0)),
+                    'loan_upto_2_lakh_price' => max(0, (float) ($_POST['loan_upto_2_lakh_price'] ?? 0)),
+                    'loan_above_2_lakh_price' => max(0, (float) ($_POST['loan_above_2_lakh_price'] ?? 0)),
+                    'updated_at' => date('c'),
+                ];
+                PmSuryaGharOpsService::saveConfig($tenantId, 'rate_chart', $rateChart);
+                $pageData['notice'] = 'Rate chart saved.';
+            }
+            $pageData['rate_chart'] = $rateChart;
+            render('Rate Chart', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Rate Chart'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Rate Chart'], 'page' => 'rate_chart', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/scheme-settings')) {
+            $settings = TenantStorageService::getTenantSchemeSettings($tenantId, $schemeKey);
+            if ($method === 'POST') {
+                $settings = [
+                    'defaults' => ['default_system_type' => (string) ($_POST['default_system_type'] ?? 'on-grid'), 'default_funding_scenario' => (string) ($_POST['default_funding_scenario'] ?? 'self_funded'), 'default_template_set' => (string) ($_POST['default_template_set'] ?? '')],
+                    'subsidy_assumptions' => ['display_value' => (string) ($_POST['subsidy_display_value'] ?? ''), 'show_subsidy_block' => isset($_POST['show_subsidy_block']), 'notes' => (string) ($_POST['subsidy_notes'] ?? '')],
+                    'finance_assumptions' => ['electricity_rate_assumption' => (float) ($_POST['electricity_rate_assumption'] ?? 8), 'payback_note' => (string) ($_POST['payback_note'] ?? ''), 'comparison_note' => (string) ($_POST['comparison_note'] ?? '')],
+                    'content_toggles' => ['show_funding_comparison' => isset($_POST['show_funding_comparison']), 'show_explainer_sections' => isset($_POST['show_explainer_sections'])],
+                    'workflow_rules' => ['enable_quick_actions' => isset($_POST['enable_quick_actions']), 'enable_detail_templates' => isset($_POST['enable_detail_templates'])],
+                    'calculation_settings' => ['recommended_size_hint' => (string) ($_POST['recommended_size_hint'] ?? ''), 'report_display_mode' => (string) ($_POST['report_display_mode'] ?? 'standard')],
+                    'updated_at' => date('c'),
+                ];
+                PmSuryaGharOpsService::saveConfig($tenantId, 'settings', $settings);
+                $pageData['notice'] = 'Scheme settings saved.';
+            }
+            $pageData['settings'] = $settings;
+            render('Scheme Settings', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Scheme Settings'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Scheme Settings'], 'page' => 'scheme_settings', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/company-branding')) {
+            $profilePath = TenantStorageService::getTenantPath($tenantId) . '/shared/profile.json';
+            $brandingPath = TenantStorageService::getTenantPath($tenantId) . '/shared/branding.json';
+            $profile = TenantStorageService::getTenantProfile($tenantId);
+            $branding = PmSuryaGharOpsService::effectiveBranding($tenantId);
+            if ($method === 'POST') {
+                $profile = array_merge($profile, [
+                    'company_name' => (string) ($_POST['company_name'] ?? ''),
+                    'owner_name' => (string) ($_POST['owner_name'] ?? ''),
+                    'phone' => (string) ($_POST['phone'] ?? ''),
+                    'email' => (string) ($_POST['email'] ?? ''),
+                    'address' => (string) ($_POST['address'] ?? ''),
+                    'city' => (string) ($_POST['city'] ?? ''),
+                    'state' => (string) ($_POST['state'] ?? ''),
+                    'pincode' => (string) ($_POST['pincode'] ?? ''),
+                    'gst_number' => (string) ($_POST['gst_number'] ?? ''),
+                    'website' => (string) ($_POST['website'] ?? ''),
+                ]);
+                $branding = array_merge($branding, [
+                    'company_name' => (string) ($_POST['company_name'] ?? ''),
+                    'phone' => (string) ($_POST['phone'] ?? ''),
+                    'email' => (string) ($_POST['email'] ?? ''),
+                    'address' => (string) ($_POST['address'] ?? ''),
+                    'gst' => (string) ($_POST['gst_number'] ?? ''),
+                    'footer_text' => (string) ($_POST['footer_text'] ?? ''),
+                    'document_branding_enabled' => isset($_POST['document_branding_enabled']),
+                    'bank_details' => ['account_name' => (string) ($_POST['bank_account_name'] ?? ''), 'account_number' => (string) ($_POST['bank_account_number'] ?? ''), 'ifsc' => (string) ($_POST['bank_ifsc'] ?? '')],
+                ]);
+                if (isset($_FILES['logo_file']['tmp_name']) && is_uploaded_file($_FILES['logo_file']['tmp_name'])) {
+                    $orig = (string) ($_FILES['logo_file']['name'] ?? 'logo.png');
+                    $safe = strtolower(preg_replace('/[^a-z0-9\.\-_]+/i', '_', $orig) ?: 'logo.png');
+                    $dir = TenantStorageService::getTenantPath($tenantId) . '/shared_uploads/logos';
+                    \App\Core\JsonStorage::ensureDir($dir);
+                    $target = date('Ymd_His') . '_' . $safe;
+                    if (move_uploaded_file((string) $_FILES['logo_file']['tmp_name'], $dir . '/' . $target)) {
+                        $branding['logo_path'] = 'shared_uploads/logos/' . $target;
+                    }
+                }
+                RegistryService::putConfigData($profilePath, $profile);
+                RegistryService::putConfigData($brandingPath, $branding);
+                $pageData['notice'] = 'Branding profile saved.';
+            }
+            $pageData['profile'] = $profile;
+            $pageData['branding'] = $branding;
+            render('Company Profile & Branding', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Company Profile & Branding'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Company Profile & Branding'], 'page' => 'company_branding', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
 
         if (str_starts_with($subPath, '/leads')) {
             $payload = PmSuryaGharOpsService::readRecords($tenantId, 'leads');
@@ -652,6 +917,7 @@ if (str_starts_with($path, '/app')) {
             $pageData['leads'] = $leads;
             $pageData['customers'] = $customers;
             $pageData['preview_rows'] = (array) ($_SESSION['lead_import_preview'] ?? []);
+            $pageData['message_templates'] = PmSuryaGharOpsService::effectiveConfig($tenantId, 'message_templates');
             render('Leads', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Leads'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Leads'], 'page' => 'leads', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
         }
 
@@ -718,9 +984,10 @@ if (str_starts_with($path, '/app')) {
                 if ($action === 'create') {
                     $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'solar_finance', 'SFR-');
                     $input = ['monthly_bill' => (float) ($_POST['monthly_bill'] ?? 0), 'monthly_units' => (float) ($_POST['monthly_units'] ?? 0), 'electricity_rate_assumption' => (float) ($_POST['electricity_rate_assumption'] ?? 8), 'selected_system_size' => (float) ($_POST['selected_system_size'] ?? 0)];
+                    $rateSnapshot = PmSuryaGharOpsService::effectiveConfig($tenantId, 'rate_chart');
+                    $calcDefaults = PmSuryaGharOpsService::effectiveConfig($tenantId, 'calculations');
+                    $input['electricity_rate_assumption'] = (float) ($calcDefaults['finance_assumptions']['electricity_rate_assumption'] ?? $input['electricity_rate_assumption']);
                     $calc = PmSuryaGharOpsService::calculations($input);
-                    $rateSnapshot = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'rate_chart');
-                    $calcDefaults = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'calculations');
                     $finance = ['funding_scenario_preference' => (string) ($_POST['funding_scenario_preference'] ?? 'self_funded')];
                     $snap = ['rate' => PmSuryaGharOpsService::snapshot($tenantId, 'solar_finance', $id . '_rate', $rateSnapshot), 'assumptions' => PmSuryaGharOpsService::snapshot($tenantId, 'solar_finance', $id . '_calc', $calcDefaults), 'finance' => PmSuryaGharOpsService::snapshot($tenantId, 'solar_finance', $id . '_finance', $finance)];
                     $items[] = ['solar_finance_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'source_lead_id' => (string) ($_POST['source_lead_id'] ?? ''), 'customer_id' => (string) ($_POST['customer_id'] ?? ''), 'status' => 'completed', 'report_title' => (string) ($_POST['report_title'] ?? ('Analysis ' . $id)), 'customer_name_snapshot' => (string) ($_POST['customer_name_snapshot'] ?? ''), 'mobile_snapshot' => (string) ($_POST['mobile_snapshot'] ?? ''), 'city_snapshot' => (string) ($_POST['city_snapshot'] ?? ''), 'state_snapshot' => (string) ($_POST['state_snapshot'] ?? ''), 'input_mode' => (string) ($_POST['input_mode'] ?? 'monthly_bill'), 'monthly_bill' => $input['monthly_bill'], 'monthly_units' => $input['monthly_units'], 'electricity_rate_assumption' => $input['electricity_rate_assumption'], 'property_type' => (string) ($_POST['property_type'] ?? ''), 'system_type' => (string) ($_POST['system_type'] ?? 'on-grid'), 'recommended_system_size' => $calc['recommended_system_size'], 'selected_system_size' => (float) ($_POST['selected_system_size'] ?? $calc['recommended_system_size']), 'on_grid_or_hybrid' => (string) ($_POST['system_type'] ?? 'on-grid'), 'rate_chart_snapshot' => ['file' => $snap['rate']], 'calculations_snapshot' => ['file' => $snap['assumptions']], 'subsidy_snapshot' => ['value' => $calc['pricing']['subsidy']], 'finance_snapshot' => ['file' => $snap['finance']], 'scenario_results' => $calc['funding_options_summary'], 'graphs_data' => $calc['graphs_data'], 'solar_at_a_glance' => $calc['solar_at_a_glance'], 'financial_clarity' => $calc['financial_clarity'], 'monthly_outflow_comparison' => $calc['monthly_outflow_comparison'], 'cumulative_expense_25y' => $calc['cumulative_expense_25y'], 'payback_data' => $calc['payback_data'], 'funding_options_summary' => $calc['funding_options_summary'], 'notes' => (string) ($_POST['notes'] ?? ''), 'created_at' => date('c'), 'updated_at' => date('c')];
@@ -779,11 +1046,12 @@ if (str_starts_with($path, '/app')) {
                     $sfSnapshot = [];
                     foreach ($solarFinance as &$sf) { if ((string) ($sf['solar_finance_id'] ?? '') === $solarId) { $sfSnapshot = $sf; $sf['status'] = 'quoted'; break; } }
                     unset($sf);
-                    $rateSnap = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'rate_chart');
-                    $branding = TenantStorageService::getTenantBranding($tenantId);
-                    $templates = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'templates');
-                    $snapFiles = ['rate' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_rate', $rateSnap), 'finance' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_finance', (array) ($sfSnapshot['finance_snapshot'] ?? [])), 'branding' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_branding', $branding), 'template' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_template', $templates), 'customer' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_customer', $customerSnapshot)];
-                    $quotes[] = ['quotation_id' => $id, 'quotation_root_id' => $rootId, 'revision_no' => $revNo, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_lead_id' => (string) ($_POST['source_lead_id'] ?? ''), 'source_solar_finance_id' => $solarId, 'quotation_status' => 'draft', 'title' => (string) ($_POST['title'] ?? ('Quotation ' . $id)), 'customer_snapshot' => $customerSnapshot, 'company_branding_snapshot' => ['file' => $snapFiles['branding']], 'template_snapshot' => ['file' => $snapFiles['template']], 'annexure_snapshot' => (array) ($_POST['annexure_snapshot'] ?? []), 'message_context_snapshot' => [], 'rate_chart_snapshot' => ['file' => $snapFiles['rate']], 'calculations_snapshot' => (array) ($sfSnapshot['calculations_snapshot'] ?? []), 'finance_snapshot' => ['file' => $snapFiles['finance']], 'quotation_items' => [['label' => 'Solar System Package', 'amount' => (float) ($_POST['item_amount'] ?? 0)]], 'pricing_summary' => (array) ($sfSnapshot['pricing'] ?? ['total' => (float) ($_POST['item_amount'] ?? 0)]), 'solar_at_a_glance' => (array) ($sfSnapshot['solar_at_a_glance'] ?? []), 'monthly_outflow_comparison' => (array) ($sfSnapshot['monthly_outflow_comparison'] ?? []), 'cumulative_expense_25y' => (array) ($sfSnapshot['cumulative_expense_25y'] ?? []), 'payback_data' => (array) ($sfSnapshot['payback_data'] ?? []), 'financial_clarity' => (array) ($sfSnapshot['financial_clarity'] ?? []), 'funding_options_summary' => (array) ($sfSnapshot['funding_options_summary'] ?? []), 'public_share_token' => bin2hex(random_bytes(16)), 'public_share_enabled' => false, 'accepted_at' => null, 'supersedes_quotation_id' => $sourceQuote['quotation_id'] ?? null, 'superseded_by_quotation_id' => null, 'created_at' => date('c'), 'updated_at' => date('c')];
+                    $rateSnap = PmSuryaGharOpsService::effectiveConfig($tenantId, 'rate_chart');
+                    $branding = PmSuryaGharOpsService::effectiveBranding($tenantId);
+                    $templates = PmSuryaGharOpsService::effectiveConfig($tenantId, 'templates');
+                    $settingsSnap = TenantStorageService::getTenantSchemeSettings($tenantId, $schemeKey);
+                    $snapFiles = ['rate' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_rate', $rateSnap), 'finance' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_finance', (array) ($sfSnapshot['finance_snapshot'] ?? [])), 'branding' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_branding', $branding), 'template' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_template', $templates), 'settings' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_settings', $settingsSnap), 'customer' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_customer', $customerSnapshot)];
+                    $quotes[] = ['quotation_id' => $id, 'quotation_root_id' => $rootId, 'revision_no' => $revNo, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_lead_id' => (string) ($_POST['source_lead_id'] ?? ''), 'source_solar_finance_id' => $solarId, 'quotation_status' => 'draft', 'title' => (string) ($_POST['title'] ?? ('Quotation ' . $id)), 'customer_snapshot' => $customerSnapshot, 'company_branding_snapshot' => ['file' => $snapFiles['branding']], 'template_snapshot' => ['file' => $snapFiles['template']], 'annexure_snapshot' => (array) ($_POST['annexure_snapshot'] ?? []), 'message_context_snapshot' => [], 'rate_chart_snapshot' => ['file' => $snapFiles['rate']], 'calculations_snapshot' => (array) ($sfSnapshot['calculations_snapshot'] ?? []), 'finance_snapshot' => ['file' => $snapFiles['finance']], 'settings_snapshot' => ['file' => $snapFiles['settings']], 'quotation_items' => [['label' => 'Solar System Package', 'amount' => (float) ($_POST['item_amount'] ?? 0)]], 'pricing_summary' => (array) ($sfSnapshot['pricing'] ?? ['total' => (float) ($_POST['item_amount'] ?? 0)]), 'solar_at_a_glance' => (array) ($sfSnapshot['solar_at_a_glance'] ?? []), 'monthly_outflow_comparison' => (array) ($sfSnapshot['monthly_outflow_comparison'] ?? []), 'cumulative_expense_25y' => (array) ($sfSnapshot['cumulative_expense_25y'] ?? []), 'payback_data' => (array) ($sfSnapshot['payback_data'] ?? []), 'financial_clarity' => (array) ($sfSnapshot['financial_clarity'] ?? []), 'funding_options_summary' => (array) ($sfSnapshot['funding_options_summary'] ?? []), 'public_share_token' => bin2hex(random_bytes(16)), 'public_share_enabled' => false, 'accepted_at' => null, 'supersedes_quotation_id' => $sourceQuote['quotation_id'] ?? null, 'superseded_by_quotation_id' => null, 'created_at' => date('c'), 'updated_at' => date('c')];
                     if ($sourceQuote !== null) {
                         foreach ($quotes as &$q2) {
                             if ((string) ($q2['quotation_id'] ?? '') === (string) ($sourceQuote['quotation_id'] ?? '')) {
@@ -867,7 +1135,7 @@ if (str_starts_with($path, '/app')) {
                     if ($quotationId !== '' && strtolower((string) ($quotation['quotation_status'] ?? '')) !== 'accepted') {
                         $pageData['errors'][] = 'Agreement should originate from accepted quotation.';
                     } else {
-                        $branding = TenantStorageService::getTenantBranding($tenantId);
+                        $branding = PmSuryaGharOpsService::effectiveBranding($tenantId);
                         $templates = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'templates');
                         $settings = TenantStorageService::getTenantSchemeSettings($tenantId, $schemeKey);
                         $agreement = ['agreement_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_lead_id' => (string) ($quotation['source_lead_id'] ?? ''), 'source_quotation_id' => $quotationId, 'agreement_status' => (string) ($_POST['agreement_status'] ?? 'draft'), 'agreement_title' => (string) ($_POST['agreement_title'] ?? ('Agreement ' . $id)), 'agreement_number_display' => $id, 'customer_snapshot' => $customer, 'quotation_snapshot_summary' => ['quotation_id' => (string) ($quotation['quotation_id'] ?? ''), 'pricing_summary' => (array) ($quotation['pricing_summary'] ?? [])], 'branding_snapshot' => $branding, 'template_snapshot' => (array) ($templates['data'] ?? []), 'terms_snapshot' => (array) ($settings['agreement_terms'] ?? []), 'agreement_sections' => ['project_summary' => (array) ($quotation['solar_at_a_glance'] ?? []), 'commercial_terms' => (array) ($quotation['pricing_summary'] ?? []), 'obligations' => (array) ($settings['agreement_obligations'] ?? [])], 'payment_terms_snapshot' => (array) ($settings['payment_terms'] ?? []), 'warranty_snapshot' => (array) ($settings['warranty_terms'] ?? []), 'next_steps_snapshot' => (array) ($settings['next_steps'] ?? []), 'notes' => (string) ($_POST['notes'] ?? ''), 'signed_status_placeholder' => 'pending', 'accepted_context' => ['accepted_at' => (string) ($quotation['accepted_at'] ?? '')], 'created_at' => date('c'), 'updated_at' => date('c')];
@@ -930,7 +1198,7 @@ if (str_starts_with($path, '/app')) {
                     $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'receipts', 'REC-');
                     $customer = $findById($customers, 'customer_id', $customerId);
                     $link = ['quotation' => (string) ($_POST['source_quotation_id'] ?? ''), 'agreement' => (string) ($_POST['source_agreement_id'] ?? '')];
-                    $receipt = ['receipt_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_quotation_id' => $link['quotation'], 'source_agreement_id' => $link['agreement'], 'receipt_status' => (string) ($_POST['receipt_status'] ?? 'issued'), 'receipt_number_display' => $id, 'receipt_date' => (string) ($_POST['receipt_date'] ?? date('Y-m-d')), 'amount_received' => (float) ($_POST['amount_received'] ?? 0), 'payment_mode' => (string) ($_POST['payment_mode'] ?? 'other'), 'transaction_reference' => (string) ($_POST['transaction_reference'] ?? ''), 'bank_reference' => (string) ($_POST['bank_reference'] ?? ''), 'received_from_name' => (string) ($_POST['received_from_name'] ?? ($customer['customer_name'] ?? '')), 'purpose' => (string) ($_POST['purpose'] ?? 'Advance payment'), 'notes' => (string) ($_POST['notes'] ?? ''), 'customer_snapshot' => $customer, 'branding_snapshot' => TenantStorageService::getTenantBranding($tenantId), 'linked_document_snapshot_summary' => ['quotation' => $link['quotation'], 'agreement' => $findById($agreements, 'agreement_id', $link['agreement'])], 'created_at' => date('c'), 'updated_at' => date('c')];
+                    $receipt = ['receipt_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_quotation_id' => $link['quotation'], 'source_agreement_id' => $link['agreement'], 'receipt_status' => (string) ($_POST['receipt_status'] ?? 'issued'), 'receipt_number_display' => $id, 'receipt_date' => (string) ($_POST['receipt_date'] ?? date('Y-m-d')), 'amount_received' => (float) ($_POST['amount_received'] ?? 0), 'payment_mode' => (string) ($_POST['payment_mode'] ?? 'other'), 'transaction_reference' => (string) ($_POST['transaction_reference'] ?? ''), 'bank_reference' => (string) ($_POST['bank_reference'] ?? ''), 'received_from_name' => (string) ($_POST['received_from_name'] ?? ($customer['customer_name'] ?? '')), 'purpose' => (string) ($_POST['purpose'] ?? 'Advance payment'), 'notes' => (string) ($_POST['notes'] ?? ''), 'customer_snapshot' => $customer, 'branding_snapshot' => PmSuryaGharOpsService::effectiveBranding($tenantId), 'linked_document_snapshot_summary' => ['quotation' => $link['quotation'], 'agreement' => $findById($agreements, 'agreement_id', $link['agreement'])], 'created_at' => date('c'), 'updated_at' => date('c')];
                     $receipt['snapshot_file'] = PmSuryaGharOpsService::snapshot($tenantId, 'receipts', $id, $receipt);
                     $items[] = $receipt;
                     $payload['items'] = $items;
@@ -1021,7 +1289,7 @@ if (str_starts_with($path, '/app')) {
                     $subtotal = array_sum(array_column($invoiceItems, 'line_total'));
                     $tax = array_sum(array_column($invoiceItems, 'tax_amount'));
                     $customer = $findById($customers, 'customer_id', $customerId);
-                    $branding = TenantStorageService::getTenantBranding($tenantId);
+                    $branding = PmSuryaGharOpsService::effectiveBranding($tenantId);
                     $invoice = ['invoice_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_quotation_id' => (string) ($_POST['source_quotation_id'] ?? ''), 'source_agreement_id' => (string) ($_POST['source_agreement_id'] ?? ''), 'invoice_status' => (string) ($_POST['invoice_status'] ?? 'draft'), 'invoice_number_display' => (string) ($_POST['invoice_number_display'] ?? $id), 'invoice_date' => (string) ($_POST['invoice_date'] ?? date('Y-m-d')), 'due_date' => (string) ($_POST['due_date'] ?? date('Y-m-d', strtotime('+15 days'))), 'customer_snapshot' => $customer, 'branding_snapshot' => $branding, 'gst_snapshot' => ['vendor_gst_number' => (string) ($_POST['vendor_gst_number'] ?? ($branding['gst_number'] ?? '')), 'customer_gst_number' => (string) ($_POST['customer_gst_number'] ?? ''), 'place_of_supply' => (string) ($_POST['place_of_supply'] ?? '')], 'invoice_items' => $invoiceItems, 'subtotal' => round($subtotal, 2), 'tax_summary' => ['tax_amount' => round($tax, 2)], 'total_amount' => round($subtotal + $tax, 2), 'notes' => (string) ($_POST['notes'] ?? ''), 'payment_instructions_snapshot' => ['bank_name' => (string) ($branding['bank_name'] ?? ''), 'upi' => (string) ($branding['upi_id'] ?? '')], 'created_at' => date('c'), 'updated_at' => date('c')];
                     $invoice['snapshot_file'] = PmSuryaGharOpsService::snapshot($tenantId, 'invoices', $id, $invoice);
                     $items[] = $invoice;
@@ -1174,7 +1442,7 @@ if (str_starts_with($path, '/app')) {
             'pageContext' => ['context_type' => 'platform', 'title' => 'Vendor Dashboard', 'breadcrumbs' => [['label' => 'Dashboard']]],
         ], 'vendor');
     }
-    if ($path === '/app/profile') render('Profile', 'profile', ['vendor' => $vendor, 'pageContext' => ['context_type' => 'platform', 'title' => 'Company Profile', 'breadcrumbs' => [['label' => 'Dashboard', 'path' => '/app/dashboard'], ['label' => 'Profile']]]], 'vendor');
+    if ($path === '/app/profile') render('Profile', 'profile', ['vendor' => $vendor, 'profile' => TenantStorageService::getTenantProfile($tenantId), 'branding' => TenantStorageService::getTenantBranding($tenantId), 'pageContext' => ['context_type' => 'platform', 'title' => 'Company Profile', 'breadcrumbs' => [['label' => 'Dashboard', 'path' => '/app/dashboard'], ['label' => 'Profile']]]], 'vendor');
     if ($path === '/app/subscription') render('Subscription', 'subscription', ['vendor' => $vendor, 'subscription' => $subscription, 'pageContext' => ['context_type' => 'platform', 'title' => 'Subscription', 'breadcrumbs' => [['label' => 'Dashboard', 'path' => '/app/dashboard'], ['label' => 'Subscription']]]], 'vendor');
 
     $pmWorkspace = SchemeWorkspaceService::pmSuryaGharMetadata($tenantId);

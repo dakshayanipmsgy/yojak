@@ -158,4 +158,93 @@ class PmSuryaGharOpsService
         }
         JsonStorage::write(self::indexPath($tenantId, $type), ['data' => $index, 'meta' => ['updated_at' => date('c')]]);
     }
+
+    public static function configPath(string $tenantId, string $configKey): string
+    {
+        return TenantStorageService::getTenantSchemePath($tenantId, self::SCHEME_KEY) . '/config/' . $configKey . '.json';
+    }
+
+    public static function loadSchemeDefaultConfig(string $configKey): array
+    {
+        $map = [
+            'templates' => 'templates_defaults.json',
+            'message_templates' => 'message_templates_defaults.json',
+            'explainer_content' => 'explainer_content_defaults.json',
+            'rate_chart' => 'rate_chart_defaults.json',
+            'calculations' => 'calculation_defaults.json',
+            'settings' => 'scheme_defaults.json',
+        ];
+        $file = $map[$configKey] ?? null;
+        if ($file === null) {
+            return [];
+        }
+
+        return RegistryService::getConfigData(DATA_PATH . '/platform/defaults/schemes/pm_surya_ghar/' . $file);
+    }
+
+    public static function mergeConfig(array $platformDefault, array $schemeDefault, array $tenantOverride): array
+    {
+        return self::deepMerge(self::deepMerge($platformDefault, $schemeDefault), $tenantOverride);
+    }
+
+    public static function effectiveConfig(string $tenantId, string $configKey): array
+    {
+        $platformDefault = self::loadSchemeDefaultConfig($configKey);
+        $schemeDefault = $configKey === 'settings'
+            ? TenantStorageService::getTenantSchemeSettings($tenantId, self::SCHEME_KEY)
+            : TenantStorageService::getTenantSchemeConfig($tenantId, self::SCHEME_KEY, $configKey);
+        $tenantOverride = $configKey === 'settings'
+            ? TenantStorageService::getTenantSchemeSettings($tenantId, self::SCHEME_KEY)
+            : TenantStorageService::getTenantSchemeConfig($tenantId, self::SCHEME_KEY, $configKey);
+
+        return self::mergeConfig($platformDefault, $schemeDefault, $tenantOverride);
+    }
+
+    public static function saveConfig(string $tenantId, string $configKey, array $data): void
+    {
+        $path = $configKey === 'settings'
+            ? TenantStorageService::getTenantSchemePath($tenantId, self::SCHEME_KEY) . '/settings.json'
+            : self::configPath($tenantId, $configKey);
+        RegistryService::putConfigData($path, $data);
+    }
+
+    public static function renderPlaceholders(string $content, array $values): string
+    {
+        return (string) preg_replace_callback('/\{\{\s*([a-z0-9_]+)\s*\}\}/i', static function (array $m) use ($values): string {
+            $key = (string) ($m[1] ?? '');
+            $value = $values[$key] ?? '';
+            return is_scalar($value) ? (string) $value : '';
+        }, $content);
+    }
+
+    public static function effectiveBranding(string $tenantId): array
+    {
+        $platformBranding = RegistryService::getConfigData(DATA_PATH . '/platform/defaults/core/branding_defaults.json');
+        $tenantBranding = TenantStorageService::getTenantBranding($tenantId);
+        $profile = TenantStorageService::getTenantProfile($tenantId);
+
+        return self::deepMerge(
+            self::deepMerge($platformBranding, $tenantBranding),
+            [
+                'company_name' => (string) ($profile['company_name'] ?? ($tenantBranding['company_name'] ?? '')),
+                'phone' => (string) ($profile['phone'] ?? ($tenantBranding['phone'] ?? '')),
+                'email' => (string) ($profile['email'] ?? ($tenantBranding['email'] ?? '')),
+                'address' => trim((string) (($profile['address'] ?? '') . ' ' . ($profile['city'] ?? '') . ' ' . ($profile['state'] ?? '') . ' ' . ($profile['pincode'] ?? ''))),
+                'gst' => (string) ($profile['gst_number'] ?? ($tenantBranding['gst'] ?? '')),
+            ]
+        );
+    }
+
+    private static function deepMerge(array $base, array $overlay): array
+    {
+        foreach ($overlay as $key => $value) {
+            if (is_array($value) && isset($base[$key]) && is_array($base[$key]) && !array_is_list($value) && !array_is_list($base[$key])) {
+                $base[$key] = self::deepMerge($base[$key], $value);
+                continue;
+            }
+            $base[$key] = $value;
+        }
+
+        return $base;
+    }
 }

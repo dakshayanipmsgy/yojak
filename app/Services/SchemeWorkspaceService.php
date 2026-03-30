@@ -30,6 +30,7 @@ class SchemeWorkspaceService
             'leads' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'leads'),
             'customers' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers'),
             'quotations' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'quotations'),
+            'solar_finance' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'solar_finance'),
             'agreements' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'agreements'),
             'receipts' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'receipts'),
             'invoices' => TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'invoices'),
@@ -38,6 +39,7 @@ class SchemeWorkspaceService
 
         $dashboardSummary = [
             'leads_count' => count($records['leads']),
+            'follow_ups_due_count' => self::countFollowUpsDue($records['leads']),
             'customers_count' => count($records['customers']),
             'draft_quotations_count' => self::countByStatus($records['quotations'], ['draft', 'in_progress']),
             'accepted_quotations_count' => self::countByStatus($records['quotations'], ['accepted', 'approved']),
@@ -45,6 +47,7 @@ class SchemeWorkspaceService
             'receipts_count' => count($records['receipts']),
             'invoices_count' => count($records['invoices']),
             'open_complaints_count' => self::countByStatus($records['complaints'], ['open', 'new', 'pending']),
+            'recent_solar_finance_reports_count' => self::countByStatus($records['solar_finance'], ['completed', 'quoted']),
         ];
 
         $workflow = $workflowRuntime['data'] ?? [];
@@ -120,6 +123,21 @@ class SchemeWorkspaceService
         }
 
         return !empty($data);
+    }
+
+
+    private static function countFollowUpsDue(array $leads): int
+    {
+        $today = date('Y-m-d');
+        $count = 0;
+        foreach ($leads as $lead) {
+            $due = substr((string) ($lead['follow_up_date'] ?? ''), 0, 10);
+            if ($due !== '' && $due <= $today && empty($lead['archived_flag'])) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     private static function countByStatus(array $items, array $statuses): int

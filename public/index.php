@@ -10,6 +10,7 @@ use App\Services\AuditService;
 use App\Services\AuthService;
 use App\Services\BillingCycleService;
 use App\Services\ModuleService;
+use App\Services\PmSuryaGharOpsService;
 use App\Services\PlanService;
 use App\Services\ProvisioningService;
 use App\Services\RegistryService;
@@ -433,6 +434,31 @@ if (str_starts_with($path, '/admin')) {
     }
 }
 
+
+if ($path === '/app/pm-surya-ghar/quotations/public') {
+    $tenantId = (string) ($_GET['tenant_id'] ?? '');
+    $token = (string) ($_GET['token'] ?? '');
+    if ($tenantId === '' || $token === '') {
+        http_response_code(404);
+        echo 'Quotation not found';
+        exit;
+    }
+    $quotes = TenantStorageService::getTenantSchemeRecords($tenantId, 'pm_surya_ghar', 'quotations');
+    $quotation = null;
+    foreach ($quotes as $q) {
+        if (($q['public_share_enabled'] ?? false) && (string) ($q['public_share_token'] ?? '') === $token) {
+            $quotation = $q;
+            break;
+        }
+    }
+    if ($quotation === null) {
+        http_response_code(404);
+        echo 'Quotation not found';
+        exit;
+    }
+    render('Public Quotation', 'pm_surya_ghar', ['page' => 'quotation_public', 'data' => ['quotation' => $quotation], 'publicMode' => true], 'vendor');
+}
+
 if (str_starts_with($path, '/app')) {
     $vendor = requireVendor();
     $subscription = RegistryService::getSubscriptionForVendor((string) $vendor['vendor_id']);
@@ -446,6 +472,291 @@ if (str_starts_with($path, '/app')) {
     $schemeSummaries = [];
     if (in_array('pm_surya_ghar', $enabledSchemes, true) && AccessService::hasSchemeAccess($vendor, 'pm_surya_ghar')) {
         $pmWorkspace = SchemeWorkspaceService::pmSuryaGharMetadata($tenantId);
+
+    if (str_starts_with($path, '/app/pm-surya-ghar/')) {
+        $schemeKey = 'pm_surya_ghar';
+        $subPath = substr($path, strlen('/app/pm-surya-ghar'));
+
+        $moduleMatch = [
+            'leads' => '/leads',
+            'customers' => '/customers',
+            'solar-finance' => '/solar-finance',
+            'quotations' => '/quotations',
+        ];
+        foreach ($moduleMatch as $mod => $prefix) {
+            if (str_starts_with($subPath, $prefix)) {
+                requireModuleAccess($vendor, $schemeKey, $mod);
+            }
+        }
+
+        $pageData = ['notice' => null, 'errors' => []];
+        if ($method === 'POST') {
+            requireCsrfOrAbort();
+        }
+
+        if ($subPath === '/leads/sample-csv') {
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="leads_sample.csv"');
+            echo "contact_name,company_name,mobile,alternate_mobile,email,address,city,state,pincode,monthly_bill,monthly_units,property_type,preferred_system_type,funding_interest,notes,source_type,source_detail,follow_up_date,best_time_to_call
+";
+            echo "Riya Sharma,Sunrise Homes,9876543210,,riya@example.com,MG Road,Indore,Madhya Pradesh,452001,3500,420,residential,on-grid,self funded,Interested in 3kw,walk_in,expo,2026-04-02,10:00-12:00
+";
+            exit;
+        }
+
+        if (str_starts_with($subPath, '/leads')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'leads');
+            $leads = $payload['items'] ?? [];
+            $customersPayload = PmSuryaGharOpsService::readRecords($tenantId, 'customers');
+            $customers = $customersPayload['items'] ?? [];
+            if ($method === 'POST') {
+                $action = (string) ($_POST['action'] ?? 'save');
+                if ($action === 'import_preview') {
+                    $tmp = [];
+                    $headers = [];
+                    if (isset($_FILES['csv_file']['tmp_name']) && is_uploaded_file($_FILES['csv_file']['tmp_name'])) {
+                        if (($h = fopen($_FILES['csv_file']['tmp_name'], 'r')) !== false) {
+                            $headers = array_map('trim', fgetcsv($h) ?: []);
+                            while (($row = fgetcsv($h)) !== false) {
+                                $tmp[] = array_combine($headers, array_pad($row, count($headers), '')) ?: [];
+                            }
+                            fclose($h);
+                        }
+                    }
+                    $_SESSION['lead_import_preview'] = $tmp;
+                    $pageData['notice'] = 'CSV preview loaded: ' . count($tmp) . ' rows';
+                } elseif ($action === 'import_commit') {
+                    $rows = (array) ($_SESSION['lead_import_preview'] ?? []);
+                    $summary = ['imported' => 0, 'skipped' => 0, 'errored' => 0];
+                    foreach ($rows as $r) {
+                        $mobileNorm = PmSuryaGharOpsService::normalizeMobile((string) ($r['mobile'] ?? ''));
+                        $emailNorm = PmSuryaGharOpsService::normalizeEmail((string) ($r['email'] ?? ''));
+                        if (($r['contact_name'] ?? '') === '' || ($mobileNorm === '' && $emailNorm === '')) {
+                            $summary['errored']++;
+                            continue;
+                        }
+                        if (PmSuryaGharOpsService::duplicateLead($leads, $mobileNorm, $emailNorm)) {
+                            $summary['skipped']++;
+                            continue;
+                        }
+                        $leadId = PmSuryaGharOpsService::nextSchemeId($tenantId, 'leads', 'LED-');
+                        $leads[] = [
+                            'lead_id' => $leadId, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey,
+                            'status' => 'new', 'contact_name' => (string) ($r['contact_name'] ?? ''), 'company_name' => (string) ($r['company_name'] ?? ''),
+                            'mobile' => (string) ($r['mobile'] ?? ''), 'email' => (string) ($r['email'] ?? ''), 'city' => (string) ($r['city'] ?? ''), 'state' => (string) ($r['state'] ?? ''),
+                            'monthly_bill' => (float) ($r['monthly_bill'] ?? 0), 'monthly_units' => (float) ($r['monthly_units'] ?? 0),
+                            'property_type' => (string) ($r['property_type'] ?? ''), 'preferred_system_type' => (string) ($r['preferred_system_type'] ?? ''),
+                            'funding_interest' => (string) ($r['funding_interest'] ?? ''), 'notes' => (string) ($r['notes'] ?? ''),
+                            'source_type' => (string) ($r['source_type'] ?? ''), 'source_detail' => (string) ($r['source_detail'] ?? ''),
+                            'follow_up_date' => (string) ($r['follow_up_date'] ?? ''), 'best_time_to_call' => (string) ($r['best_time_to_call'] ?? ''),
+                            'intro_message_sent_flag' => false, 'detailed_message_sent_flag' => false, 'call_not_picked_count' => 0, 'archived_flag' => false,
+                            'created_at' => date('c'), 'updated_at' => date('c'),
+                        ];
+                        $summary['imported']++;
+                    }
+                    $payload['items'] = $leads;
+                    PmSuryaGharOpsService::writeRecords($tenantId, 'leads', $payload);
+                    PmSuryaGharOpsService::writeIndex($tenantId, 'lead', $leads, 'lead_id');
+                    $pageData['notice'] = 'Import complete: ' . json_encode($summary);
+                } else {
+                    $leadId = (string) ($_POST['lead_id'] ?? '');
+                    if ($action === 'create') {
+                        $mobileNorm = PmSuryaGharOpsService::normalizeMobile((string) ($_POST['mobile'] ?? ''));
+                        $emailNorm = PmSuryaGharOpsService::normalizeEmail((string) ($_POST['email'] ?? ''));
+                        if (PmSuryaGharOpsService::duplicateLead($leads, $mobileNorm, $emailNorm)) {
+                            $pageData['errors'][] = 'Duplicate lead by mobile/email.';
+                        } else {
+                            $leadId = PmSuryaGharOpsService::nextSchemeId($tenantId, 'leads', 'LED-');
+                            $leads[] = ['lead_id' => $leadId, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'source_type' => (string) ($_POST['source_type'] ?? ''), 'source_detail' => (string) ($_POST['source_detail'] ?? ''), 'status' => (string) ($_POST['status'] ?? 'new'), 'owner_name' => (string) ($_POST['owner_name'] ?? ''), 'contact_name' => (string) ($_POST['contact_name'] ?? ''), 'company_name' => (string) ($_POST['company_name'] ?? ''), 'mobile' => (string) ($_POST['mobile'] ?? ''), 'alternate_mobile' => (string) ($_POST['alternate_mobile'] ?? ''), 'email' => (string) ($_POST['email'] ?? ''), 'address' => (string) ($_POST['address'] ?? ''), 'city' => (string) ($_POST['city'] ?? ''), 'state' => (string) ($_POST['state'] ?? ''), 'pincode' => (string) ($_POST['pincode'] ?? ''), 'monthly_bill' => (float) ($_POST['monthly_bill'] ?? 0), 'monthly_units' => (float) ($_POST['monthly_units'] ?? 0), 'property_type' => (string) ($_POST['property_type'] ?? ''), 'preferred_system_type' => (string) ($_POST['preferred_system_type'] ?? ''), 'funding_interest' => (string) ($_POST['funding_interest'] ?? ''), 'notes' => (string) ($_POST['notes'] ?? ''), 'tags' => (string) ($_POST['tags'] ?? ''), 'follow_up_date' => (string) ($_POST['follow_up_date'] ?? ''), 'best_time_to_call' => (string) ($_POST['best_time_to_call'] ?? ''), 'call_not_picked_count' => 0, 'intro_message_sent_flag' => false, 'detailed_message_sent_flag' => false, 'archived_flag' => false, 'merge_history' => [], 'created_at' => date('c'), 'updated_at' => date('c'), 'created_by_context' => (string) $vendor['vendor_id']];
+                            $pageData['notice'] = 'Lead created: ' . $leadId;
+                        }
+                    }
+                    foreach ($leads as &$lead) {
+                        if ((string) ($lead['lead_id'] ?? '') !== $leadId) { continue; }
+                        if ($action === 'archive') { $lead['archived_flag'] = true; $lead['status'] = 'archived'; }
+                        if ($action === 'call_not_picked') { $lead['call_not_picked_count'] = (int) ($lead['call_not_picked_count'] ?? 0) + 1; $lead['status'] = 'attempted_contact'; }
+                        if ($action === 'mark_intro_sent') { $lead['intro_message_sent_flag'] = true; $lead['intro_message_sent_at'] = date('c'); }
+                        if ($action === 'mark_detailed_sent') { $lead['detailed_message_sent_flag'] = true; $lead['detailed_message_sent_at'] = date('c'); $lead['status'] = 'information_shared'; }
+                        if ($action === 'follow_up') { $lead['follow_up_date'] = (string) ($_POST['follow_up_date'] ?? ''); $lead['last_contact_note'] = (string) ($_POST['last_contact_note'] ?? ''); $lead['last_contact_at'] = date('c'); }
+                        if ($action === 'convert_customer') {
+                            $mobileNorm = PmSuryaGharOpsService::normalizeMobile((string) ($lead['mobile'] ?? ''));
+                            $emailNorm = PmSuryaGharOpsService::normalizeEmail((string) ($lead['email'] ?? ''));
+                            $dup = PmSuryaGharOpsService::duplicateCustomer($customers, $mobileNorm, $emailNorm);
+                            if ($dup) {
+                                $lead['converted_customer_id'] = (string) $dup['customer_id'];
+                            } else {
+                                $customerId = PmSuryaGharOpsService::nextSchemeId($tenantId, 'customers', 'CUS-');
+                                $customers[] = ['customer_id' => $customerId, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'source_lead_id' => $leadId, 'customer_name' => (string) ($lead['contact_name'] ?? ''), 'company_name' => (string) ($lead['company_name'] ?? ''), 'mobile' => (string) ($lead['mobile'] ?? ''), 'alternate_mobile' => (string) ($lead['alternate_mobile'] ?? ''), 'email' => (string) ($lead['email'] ?? ''), 'address' => (string) ($lead['address'] ?? ''), 'city' => (string) ($lead['city'] ?? ''), 'state' => (string) ($lead['state'] ?? ''), 'pincode' => (string) ($lead['pincode'] ?? ''), 'property_type' => (string) ($lead['property_type'] ?? ''), 'preferred_system_type' => (string) ($lead['preferred_system_type'] ?? ''), 'funding_preference' => (string) ($lead['funding_interest'] ?? ''), 'monthly_bill' => (float) ($lead['monthly_bill'] ?? 0), 'monthly_units' => (float) ($lead['monthly_units'] ?? 0), 'notes' => (string) ($lead['notes'] ?? ''), 'tags' => (string) ($lead['tags'] ?? ''), 'active_flag' => true, 'created_at' => date('c'), 'updated_at' => date('c')];
+                                $lead['converted_customer_id'] = $customerId;
+                            }
+                            $lead['status'] = 'converted_to_customer';
+                        }
+                        if ($action === 'merge') {
+                            $targetId = (string) ($_POST['target_lead_id'] ?? '');
+                            foreach ($leads as &$target) {
+                                if ((string) ($target['lead_id'] ?? '') !== $targetId) { continue; }
+                                $target['notes'] = trim((string) ($target['notes'] ?? '') . "
+[Merged {$leadId}] " . (string) ($lead['notes'] ?? ''));
+                                $target['merge_history'][] = ['merged_lead_id' => $leadId, 'merged_at' => date('c')];
+                                break;
+                            }
+                            unset($target);
+                            $lead['duplicate_master_lead_id'] = $targetId;
+                            $lead['archived_flag'] = true;
+                            $lead['status'] = 'archived';
+                        }
+                        $lead['updated_at'] = date('c');
+                        break;
+                    }
+                    unset($lead);
+                    $payload['items'] = $leads;
+                    $customersPayload['items'] = $customers;
+                    PmSuryaGharOpsService::writeRecords($tenantId, 'leads', $payload);
+                    PmSuryaGharOpsService::writeRecords($tenantId, 'customers', $customersPayload);
+                    PmSuryaGharOpsService::writeIndex($tenantId, 'lead', $leads, 'lead_id');
+                    PmSuryaGharOpsService::writeIndex($tenantId, 'customer', $customers, 'customer_id');
+                }
+            }
+            $pageData['leads'] = $leads;
+            $pageData['customers'] = $customers;
+            $pageData['preview_rows'] = (array) ($_SESSION['lead_import_preview'] ?? []);
+            render('Leads', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Leads'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Leads'], 'page' => 'leads', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/customers')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'customers');
+            $customers = $payload['items'] ?? [];
+            if ($method === 'POST') {
+                $action = (string) ($_POST['action'] ?? 'create');
+                if ($action === 'create') {
+                    $mobileNorm = PmSuryaGharOpsService::normalizeMobile((string) ($_POST['mobile'] ?? ''));
+                    $emailNorm = PmSuryaGharOpsService::normalizeEmail((string) ($_POST['email'] ?? ''));
+                    if (!PmSuryaGharOpsService::duplicateCustomer($customers, $mobileNorm, $emailNorm)) {
+                        $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'customers', 'CUS-');
+                        $customers[] = ['customer_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'source_lead_id' => (string) ($_POST['source_lead_id'] ?? ''), 'customer_name' => (string) ($_POST['customer_name'] ?? ''), 'company_name' => (string) ($_POST['company_name'] ?? ''), 'mobile' => (string) ($_POST['mobile'] ?? ''), 'email' => (string) ($_POST['email'] ?? ''), 'address' => (string) ($_POST['address'] ?? ''), 'city' => (string) ($_POST['city'] ?? ''), 'state' => (string) ($_POST['state'] ?? ''), 'monthly_bill' => (float) ($_POST['monthly_bill'] ?? 0), 'monthly_units' => (float) ($_POST['monthly_units'] ?? 0), 'property_type' => (string) ($_POST['property_type'] ?? ''), 'preferred_system_type' => (string) ($_POST['preferred_system_type'] ?? ''), 'funding_preference' => (string) ($_POST['funding_preference'] ?? ''), 'active_flag' => true, 'created_at' => date('c'), 'updated_at' => date('c')];
+                        $pageData['notice'] = 'Customer created';
+                    } else {
+                        $pageData['errors'][] = 'Duplicate customer by mobile/email';
+                    }
+                }
+                $payload['items'] = $customers;
+                PmSuryaGharOpsService::writeRecords($tenantId, 'customers', $payload);
+                PmSuryaGharOpsService::writeIndex($tenantId, 'customer', $customers, 'customer_id');
+            }
+            $pageData['customers'] = $customers;
+            $pageData['quotations'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'quotations');
+            $pageData['solar_finance'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'solar_finance');
+            render('Customers', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Customers'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Customers'], 'page' => 'customers', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/solar-finance')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'solar_finance');
+            $items = $payload['items'] ?? [];
+            if ($method === 'POST') {
+                $action = (string) ($_POST['action'] ?? 'create');
+                if ($action === 'create') {
+                    $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'solar_finance', 'SFR-');
+                    $input = ['monthly_bill' => (float) ($_POST['monthly_bill'] ?? 0), 'monthly_units' => (float) ($_POST['monthly_units'] ?? 0), 'electricity_rate_assumption' => (float) ($_POST['electricity_rate_assumption'] ?? 8), 'selected_system_size' => (float) ($_POST['selected_system_size'] ?? 0)];
+                    $calc = PmSuryaGharOpsService::calculations($input);
+                    $rateSnapshot = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'rate_chart');
+                    $calcDefaults = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'calculations');
+                    $finance = ['funding_scenario_preference' => (string) ($_POST['funding_scenario_preference'] ?? 'self_funded')];
+                    $snap = ['rate' => PmSuryaGharOpsService::snapshot($tenantId, 'solar_finance', $id . '_rate', $rateSnapshot), 'assumptions' => PmSuryaGharOpsService::snapshot($tenantId, 'solar_finance', $id . '_calc', $calcDefaults), 'finance' => PmSuryaGharOpsService::snapshot($tenantId, 'solar_finance', $id . '_finance', $finance)];
+                    $items[] = ['solar_finance_id' => $id, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'source_lead_id' => (string) ($_POST['source_lead_id'] ?? ''), 'customer_id' => (string) ($_POST['customer_id'] ?? ''), 'status' => 'completed', 'report_title' => (string) ($_POST['report_title'] ?? ('Analysis ' . $id)), 'customer_name_snapshot' => (string) ($_POST['customer_name_snapshot'] ?? ''), 'mobile_snapshot' => (string) ($_POST['mobile_snapshot'] ?? ''), 'city_snapshot' => (string) ($_POST['city_snapshot'] ?? ''), 'state_snapshot' => (string) ($_POST['state_snapshot'] ?? ''), 'input_mode' => (string) ($_POST['input_mode'] ?? 'monthly_bill'), 'monthly_bill' => $input['monthly_bill'], 'monthly_units' => $input['monthly_units'], 'electricity_rate_assumption' => $input['electricity_rate_assumption'], 'property_type' => (string) ($_POST['property_type'] ?? ''), 'system_type' => (string) ($_POST['system_type'] ?? 'on-grid'), 'recommended_system_size' => $calc['recommended_system_size'], 'selected_system_size' => (float) ($_POST['selected_system_size'] ?? $calc['recommended_system_size']), 'on_grid_or_hybrid' => (string) ($_POST['system_type'] ?? 'on-grid'), 'rate_chart_snapshot' => ['file' => $snap['rate']], 'calculations_snapshot' => ['file' => $snap['assumptions']], 'subsidy_snapshot' => ['value' => $calc['pricing']['subsidy']], 'finance_snapshot' => ['file' => $snap['finance']], 'scenario_results' => $calc['funding_options_summary'], 'graphs_data' => $calc['graphs_data'], 'solar_at_a_glance' => $calc['solar_at_a_glance'], 'financial_clarity' => $calc['financial_clarity'], 'monthly_outflow_comparison' => $calc['monthly_outflow_comparison'], 'cumulative_expense_25y' => $calc['cumulative_expense_25y'], 'payback_data' => $calc['payback_data'], 'funding_options_summary' => $calc['funding_options_summary'], 'notes' => (string) ($_POST['notes'] ?? ''), 'created_at' => date('c'), 'updated_at' => date('c')];
+                }
+                $payload['items'] = $items;
+                PmSuryaGharOpsService::writeRecords($tenantId, 'solar_finance', $payload);
+                PmSuryaGharOpsService::writeIndex($tenantId, 'solar_finance', $items, 'solar_finance_id');
+            }
+            $pageData['items'] = $items;
+            $pageData['customers'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers');
+            $pageData['leads'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'leads');
+            render('Solar & Finance', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Solar & Finance'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Solar & Finance'], 'page' => 'solar_finance', 'data' => $pageData, 'csrfToken' => $csrfToken], 'vendor');
+        }
+
+        if (str_starts_with($subPath, '/quotations')) {
+            $payload = PmSuryaGharOpsService::readRecords($tenantId, 'quotations');
+            $quotes = $payload['items'] ?? [];
+            $customers = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'customers');
+            $solarFinance = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'solar_finance');
+            if ($method === 'POST') {
+                $action = (string) ($_POST['action'] ?? 'create');
+                if ($action === 'create' || $action === 'revise') {
+                    $sourceQuote = null;
+                    $rootId = '';
+                    $revNo = 1;
+                    if ($action === 'revise') {
+                        $sourceId = (string) ($_POST['source_quotation_id'] ?? '');
+                        foreach ($quotes as &$q) {
+                            if ((string) ($q['quotation_id'] ?? '') === $sourceId) {
+                                $sourceQuote = $q;
+                                $q['quotation_status'] = 'superseded';
+                                break;
+                            }
+                        }
+                        unset($q);
+                        $rootId = (string) (($sourceQuote['quotation_root_id'] ?? '') ?: ($sourceQuote['quotation_id'] ?? ''));
+                        $revNo = ((int) ($sourceQuote['revision_no'] ?? 1)) + 1;
+                    }
+                    $id = PmSuryaGharOpsService::nextSchemeId($tenantId, 'quotations', 'QUO-');
+                    if ($rootId === '') { $rootId = $id; }
+                    $customerId = (string) ($_POST['customer_id'] ?? '');
+                    $solarId = (string) ($_POST['source_solar_finance_id'] ?? '');
+                    $customerSnapshot = [];
+                    foreach ($customers as $c) { if ((string) ($c['customer_id'] ?? '') === $customerId) { $customerSnapshot = $c; break; } }
+                    $sfSnapshot = [];
+                    foreach ($solarFinance as &$sf) { if ((string) ($sf['solar_finance_id'] ?? '') === $solarId) { $sfSnapshot = $sf; $sf['status'] = 'quoted'; break; } }
+                    unset($sf);
+                    $rateSnap = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'rate_chart');
+                    $branding = TenantStorageService::getTenantBranding($tenantId);
+                    $templates = TenantStorageService::getTenantSchemeConfig($tenantId, $schemeKey, 'templates');
+                    $snapFiles = ['rate' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_rate', $rateSnap), 'finance' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_finance', (array) ($sfSnapshot['finance_snapshot'] ?? [])), 'branding' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_branding', $branding), 'template' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_template', $templates), 'customer' => PmSuryaGharOpsService::snapshot($tenantId, 'quotations', $id . '_customer', $customerSnapshot)];
+                    $quotes[] = ['quotation_id' => $id, 'quotation_root_id' => $rootId, 'revision_no' => $revNo, 'tenant_id' => $tenantId, 'scheme_key' => $schemeKey, 'customer_id' => $customerId, 'source_lead_id' => (string) ($_POST['source_lead_id'] ?? ''), 'source_solar_finance_id' => $solarId, 'quotation_status' => 'draft', 'title' => (string) ($_POST['title'] ?? ('Quotation ' . $id)), 'customer_snapshot' => $customerSnapshot, 'company_branding_snapshot' => ['file' => $snapFiles['branding']], 'template_snapshot' => ['file' => $snapFiles['template']], 'annexure_snapshot' => (array) ($_POST['annexure_snapshot'] ?? []), 'message_context_snapshot' => [], 'rate_chart_snapshot' => ['file' => $snapFiles['rate']], 'calculations_snapshot' => (array) ($sfSnapshot['calculations_snapshot'] ?? []), 'finance_snapshot' => ['file' => $snapFiles['finance']], 'quotation_items' => [['label' => 'Solar System Package', 'amount' => (float) ($_POST['item_amount'] ?? 0)]], 'pricing_summary' => (array) ($sfSnapshot['pricing'] ?? ['total' => (float) ($_POST['item_amount'] ?? 0)]), 'solar_at_a_glance' => (array) ($sfSnapshot['solar_at_a_glance'] ?? []), 'monthly_outflow_comparison' => (array) ($sfSnapshot['monthly_outflow_comparison'] ?? []), 'cumulative_expense_25y' => (array) ($sfSnapshot['cumulative_expense_25y'] ?? []), 'payback_data' => (array) ($sfSnapshot['payback_data'] ?? []), 'financial_clarity' => (array) ($sfSnapshot['financial_clarity'] ?? []), 'funding_options_summary' => (array) ($sfSnapshot['funding_options_summary'] ?? []), 'public_share_token' => bin2hex(random_bytes(16)), 'public_share_enabled' => false, 'accepted_at' => null, 'supersedes_quotation_id' => $sourceQuote['quotation_id'] ?? null, 'superseded_by_quotation_id' => null, 'created_at' => date('c'), 'updated_at' => date('c')];
+                    if ($sourceQuote !== null) {
+                        foreach ($quotes as &$q2) {
+                            if ((string) ($q2['quotation_id'] ?? '') === (string) ($sourceQuote['quotation_id'] ?? '')) {
+                                $q2['superseded_by_quotation_id'] = $id;
+                            }
+                        }
+                        unset($q2);
+                    }
+                    $sfPayload = PmSuryaGharOpsService::readRecords($tenantId, 'solar_finance');
+                    $sfPayload['items'] = $solarFinance;
+                    PmSuryaGharOpsService::writeRecords($tenantId, 'solar_finance', $sfPayload);
+                }
+                foreach ($quotes as &$q) {
+                    if ((string) ($q['quotation_id'] ?? '') !== (string) ($_POST['quotation_id'] ?? '')) { continue; }
+                    if ($action === 'accept') { $q['quotation_status'] = 'accepted'; $q['accepted_at'] = date('c'); }
+                    if ($action === 'share_enable') { $q['public_share_enabled'] = true; $q['quotation_status'] = 'shared'; }
+                    $q['updated_at'] = date('c');
+                    break;
+                }
+                unset($q);
+                $payload['items'] = $quotes;
+                PmSuryaGharOpsService::writeRecords($tenantId, 'quotations', $payload);
+                PmSuryaGharOpsService::writeIndex($tenantId, 'quotation', $quotes, 'quotation_id', 'quotation_status');
+            }
+            if ($subPath === '/quotations/print') {
+                $id = (string) ($_GET['id'] ?? '');
+                foreach ($quotes as $q) {
+                    if ((string) ($q['quotation_id'] ?? '') !== $id) { continue; }
+                    header('Content-Type: text/html; charset=UTF-8');
+                    echo '<html><body><h1>Quotation ' . htmlspecialchars($id) . ' Rev ' . (int) ($q['revision_no'] ?? 1) . '</h1>';
+                    echo '<p>Status: ' . htmlspecialchars((string) ($q['quotation_status'] ?? 'draft')) . '</p>';
+                    echo '<h3>Customer</h3><pre>' . htmlspecialchars(json_encode($q['customer_snapshot'] ?? [], JSON_PRETTY_PRINT)) . '</pre>';
+                    echo '<h3>Pricing</h3><pre>' . htmlspecialchars(json_encode($q['pricing_summary'] ?? [], JSON_PRETTY_PRINT)) . '</pre>';
+                    echo '<h3>Finance</h3><pre>' . htmlspecialchars(json_encode($q['funding_options_summary'] ?? [], JSON_PRETTY_PRINT)) . '</pre>';
+                    echo '</body></html>';
+                    exit;
+                }
+            }
+            $pageData['quotes'] = $quotes;
+            $pageData['customers'] = $customers;
+            $pageData['leads'] = TenantStorageService::getTenantSchemeRecords($tenantId, $schemeKey, 'leads');
+            $pageData['solar_finance'] = $solarFinance;
+            render('Quotations', 'pm_surya_ghar', ['vendor' => $vendor, 'workspace' => $pmWorkspace, 'navigation' => SchemeWorkspaceService::buildSchemeNavigation($vendor, $pmWorkspace), 'routeContext' => ['label' => 'Quotations'], 'pageContext' => ['context_type' => 'scheme', 'title' => 'Quotations'], 'page' => 'quotations', 'data' => $pageData, 'csrfToken' => $csrfToken, 'tenantId' => $tenantId], 'vendor');
+        }
+    }
         $schemeSummaries[] = [
             'scheme_name' => (string) ($pmWorkspace['scheme']['scheme_name'] ?? 'PM Surya Ghar'),
             'scheme_slug' => (string) ($pmWorkspace['scheme_slug'] ?? 'pm-surya-ghar'),

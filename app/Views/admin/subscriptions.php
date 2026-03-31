@@ -1,4 +1,8 @@
 <h1>Subscription Management</h1>
+<?php if (isset($vendor) && is_array($vendor)): ?>
+    <p class="small-muted">Managing subscription for <strong><?= htmlspecialchars((string) ($vendor['company_name'] ?? '')) ?></strong> (<?= htmlspecialchars((string) ($vendor['vendor_id'] ?? '')) ?>).</p>
+    <p><a class="btn secondary" href="/admin/vendors/view?id=<?= urlencode((string) ($vendor['vendor_id'] ?? '')) ?>">Back to Vendor Detail</a></p>
+<?php endif; ?>
 <table><tr><th>Vendor</th><th>Status</th><th>Plan</th><th>Cycle</th><th>Renewal</th><th>Manage</th></tr>
 <?php $subByVendor=[]; foreach($subscriptions as $s){$subByVendor[$s['vendor_id']]=$s;} foreach($vendors as $v): $s=$subByVendor[$v['vendor_id']]??[]; ?>
 <tr><td><?= htmlspecialchars($v['company_name']) ?> (<?= htmlspecialchars($v['vendor_id']) ?>)</td><td><?= htmlspecialchars((string)($s['subscription_status'] ?? 'none')) ?></td><td><?= htmlspecialchars((string)($s['plan_key'] ?? '-')) ?></td><td><?= htmlspecialchars((string)($s['billing_cycle'] ?? '-')) ?></td><td><?= htmlspecialchars((string)($s['renewal_date'] ?? '-')) ?></td><td>

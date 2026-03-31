@@ -24,6 +24,7 @@
 <td><?= htmlspecialchars(implode(', ', (array) ($v['enabled_schemes'] ?? []))) ?></td>
 <td>
 <a class="btn" href="/admin/vendors/view?id=<?= urlencode((string) ($v['vendor_id'] ?? '')) ?>">View</a>
+<a class="btn secondary" href="/admin/vendors/manage-subscription?id=<?= urlencode((string) ($v['vendor_id'] ?? '')) ?>">Manage Subscription</a>
 <form method="post" class="inline-form"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string) ($csrfToken ?? '')) ?>"><input type="hidden" name="vendor_id" value="<?= htmlspecialchars((string) ($v['vendor_id'] ?? '')) ?>"><button class="btn" name="action" value="activate">Activate</button><button class="btn secondary" name="action" value="suspend">Suspend</button><button class="btn secondary" name="action" value="cancel">Cancel</button></form>
 <form method="post" class="inline-form"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars((string) ($csrfToken ?? '')) ?>"><input type="hidden" name="vendor_id" value="<?= htmlspecialchars((string) ($v['vendor_id'] ?? '')) ?>"><button class="btn" name="action" value="refresh_entitlements">Refresh Entitlements</button><button class="btn secondary" name="action" value="repair_storage">Repair Storage</button></form>
 <a class="btn" href="/admin/subscriptions">Manage Subscription</a>

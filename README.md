@@ -11,10 +11,10 @@ Open: `http://localhost:8080`
 
 ### Quick URL checks
 - Public: `/`, `/homepage`, `/schemes`, `/scheme/pm-surya-ghar`, `/pricing`, `/signup`, `/signup/pm-surya-ghar`, `/login`
-- Admin: `/admin/login`, `/admin/dashboard`, `/admin/pending-signups`, `/admin/vendors`, `/admin/schemes`, `/admin/modules`, `/admin/plans`, `/admin/settings`
+- Admin: `/admin/login`, `/admin/dashboard`, `/admin/pending-signups`, `/admin/vendors`, `/admin/vendors/view`, `/admin/vendors/manage-subscription`, `/admin/schemes`, `/admin/modules`, `/admin/plans`, `/admin/settings`
 - Admin diagnostics: `/admin/system-health` (validate + safe repair for missing storage contracts)
 - Vendor: `/app`, `/app/dashboard`, `/app/profile`, `/app/subscription`
-- PM Surya Ghar placeholders: `/app/pm-surya-ghar/leads` (and related module URLs)
+- PM Surya Ghar modules: `/app/pm-surya-ghar/leads` (and related module URLs)
 
 ## Seeded Credentials
 - Superadmin: `admin@yojak.local` / `Admin@123`
@@ -56,4 +56,4 @@ The fallback only bridges hosting constraints and still routes through the canon
 - Add new schemes in `data/platform/schemes.json`
 - Add/adjust modules in `data/platform/modules.json`
 - Add/adjust plans in `data/platform/plans.json`
-- Replace placeholders with real module controllers/pages later without changing platform core.
+- Continue extending scheme modules without changing platform core URL contracts.

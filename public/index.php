@@ -375,6 +375,21 @@ if (str_starts_with($path, '/admin')) {
         render('Vendor Detail', 'vendor_view', compact('vendor', 'subscription', 'tenantPath', 'tenantMeta', 'csrfToken'), 'admin');
     }
 
+    if ($path === '/admin/vendors/manage-subscription') {
+        $vendorId = (string) ($_GET['id'] ?? '');
+        $vendor = RegistryService::getVendorById($vendorId);
+        if (!$vendor) {
+            http_response_code(404);
+            echo 'Vendor not found';
+            exit;
+        }
+
+        $vendorSubscription = RegistryService::getSubscriptionForVendor($vendorId);
+        $vendors = [$vendor];
+        $subscriptions = $vendorSubscription ? [$vendorSubscription] : [];
+        render('Manage Vendor Subscription', 'subscriptions', compact('vendors', 'subscriptions', 'plans', 'modules', 'csrfToken', 'vendor'), 'admin');
+    }
+
     if ($path === '/admin/schemes') {
         $search = strtolower(trim((string) ($_GET['q'] ?? '')));
         $filteredSchemes = array_values(array_filter($schemes, function (array $s) use ($search): bool {
